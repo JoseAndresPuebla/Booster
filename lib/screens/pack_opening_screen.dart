@@ -30,7 +30,8 @@ class PackOpeningScreen extends StatefulWidget {
   State<PackOpeningScreen> createState() => _PackOpeningScreenState();
 }
 
-class _PackOpeningScreenState extends State<PackOpeningScreen> {
+class _PackOpeningScreenState extends State<PackOpeningScreen>
+    with SingleTickerProviderStateMixin {
   PackOpeningStage _stage = PackOpeningStage.sealed;
   List<CardModel> _packCards = [];
   int _currentCardIndex = 0;
@@ -38,10 +39,26 @@ class _PackOpeningScreenState extends State<PackOpeningScreen> {
   bool _isSaving = false;
   Future<void>? _cardRollFuture;
 
+  // Swipe-to-dismiss gesture state
+  double _dragX = 0.0;
+  bool _isDismissing = false;
+  late AnimationController _swipeController;
+  Animation<double>? _swipeAnimation;
+
   @override
   void initState() {
     super.initState();
     _cardRollFuture = _rollCardsEarly();
+    _swipeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+  }
+
+  @override
+  void dispose() {
+    _swipeController.dispose();
+    super.dispose();
   }
 
   // Pre-generate cards immediately so precaching happens during the tear gesture!
@@ -81,6 +98,13 @@ class _PackOpeningScreenState extends State<PackOpeningScreen> {
       );
     }
 
+    // Pre-flip all cards except the first one (card 0)
+    // Only the first card starts face down; cards 1..N will be face up as swiped!
+    _flippedCards.clear();
+    for (int i = 1; i < _packCards.length; i++) {
+      _flippedCards.add(i);
+    }
+
     // Brief suspense delay for the pack burst effect
     await Future.delayed(const Duration(milliseconds: 600));
 
@@ -106,14 +130,64 @@ class _PackOpeningScreenState extends State<PackOpeningScreen> {
     }
   }
 
-  void _nextCard() {
-    if (_currentCardIndex < _packCards.length - 1) {
+  void _dismissCard({double velocity = 0.0, double direction = 1.0}) {
+    if (_isDismissing) return;
+    setState(() {
+      _isDismissing = true;
+    });
+    HapticFeedback.lightImpact();
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final targetX = direction >= 0 ? screenWidth * 1.3 : -screenWidth * 1.3;
+
+    _swipeAnimation = Tween<double>(
+      begin: _dragX,
+      end: targetX,
+    ).animate(CurvedAnimation(
+      parent: _swipeController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _swipeController.forward(from: 0.0).then((_) {
+      if (!mounted) return;
+      _flippedCards.add(_currentCardIndex);
+      if (_currentCardIndex < _packCards.length - 1) {
+        setState(() {
+          _currentCardIndex++;
+          _dragX = 0.0;
+          _isDismissing = false;
+        });
+        _swipeController.reset();
+
+        final nextCard = _packCards[_currentCardIndex];
+        if (nextCard.rarity.tier >= 4) {
+          HapticFeedback.heavyImpact();
+        }
+      } else {
+        _finishOpening();
+      }
+    });
+  }
+
+  void _snapBack() {
+    _swipeAnimation = Tween<double>(
+      begin: _dragX,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _swipeController,
+      curve: Curves.easeOutBack,
+    ));
+    _swipeController.forward(from: 0.0).then((_) {
+      if (!mounted) return;
       setState(() {
-        _currentCardIndex++;
+        _dragX = 0.0;
       });
-    } else {
-      _finishOpening();
-    }
+      _swipeController.reset();
+    });
+  }
+
+  void _nextCard() {
+    _dismissCard(direction: 1.0);
   }
 
   void _finishOpening() async {
@@ -258,14 +332,86 @@ class _PackOpeningScreenState extends State<PackOpeningScreen> {
 
         const Spacer(),
 
-        // The 3D Interactive Card
+        // The Card Stack with Swipe Gestures
         Center(
-          child: TiltableCardWidget(
-            card: currentCard,
-            isFaceUp: isFlipped,
-            onTap: () => _flipCard(_currentCardIndex),
+          child: SizedBox(
             width: 270,
             height: 380,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                // Next card underneath (already face up!)
+                if (_currentCardIndex + 1 < _packCards.length)
+                  Transform.scale(
+                    scale: 0.94,
+                    child: Opacity(
+                      opacity: 0.75,
+                      child: TiltableCardWidget(
+                        key: ValueKey('pack_card_${_currentCardIndex + 1}'),
+                        card: _packCards[_currentCardIndex + 1],
+                        isFaceUp: _flippedCards.contains(_currentCardIndex + 1),
+                        enablePanTilt: false,
+                        width: 270,
+                        height: 380,
+                      ),
+                    ),
+                  ),
+
+                // Top active card
+                GestureDetector(
+                  onTap: () {
+                    if (!_flippedCards.contains(_currentCardIndex)) {
+                      _flipCard(_currentCardIndex);
+                    }
+                  },
+                  onHorizontalDragUpdate: (details) {
+                    if (_isDismissing) return;
+                    setState(() {
+                      _dragX += details.delta.dx;
+                    });
+                  },
+                  onHorizontalDragEnd: (details) {
+                    if (_isDismissing) return;
+                    final velocity = details.primaryVelocity ?? 0.0;
+                    if (_dragX.abs() > 80 || velocity.abs() > 400) {
+                      final dir = velocity.abs() > 400
+                          ? (velocity > 0 ? 1.0 : -1.0)
+                          : (_dragX > 0 ? 1.0 : -1.0);
+                      _dismissCard(velocity: velocity, direction: dir);
+                    } else {
+                      _snapBack();
+                    }
+                  },
+                  child: AnimatedBuilder(
+                    animation: _swipeController,
+                    builder: (context, child) {
+                      final currentX = _isDismissing || _swipeController.isAnimating
+                          ? (_swipeAnimation?.value ?? _dragX)
+                          : _dragX;
+                      final rotation = currentX * 0.0006;
+
+                      return Transform.translate(
+                        offset: Offset(currentX, 0),
+                        child: Transform.rotate(
+                          angle: rotation,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: TiltableCardWidget(
+                      key: ValueKey('pack_card_$_currentCardIndex'),
+                      card: currentCard,
+                      isFaceUp: isFlipped,
+                      enablePanTilt: false,
+                      onTap: () => _flipCard(_currentCardIndex),
+                      width: 270,
+                      height: 380,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
 
@@ -298,10 +444,15 @@ class _PackOpeningScreenState extends State<PackOpeningScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 6),
+          const Text(
+            'Desliza hacia un lado para la siguiente carta ➔',
+            style: TextStyle(color: Colors.white38, fontSize: 12),
+          ),
         ] else ...[
           const Text(
-            'Toca la carta para revelarla',
-            style: TextStyle(color: Colors.white60, fontSize: 14),
+            'Toca la carta para revelarla (o desliza hacia un lado)',
+            style: TextStyle(color: Colors.white60, fontSize: 13),
           ),
         ],
 
