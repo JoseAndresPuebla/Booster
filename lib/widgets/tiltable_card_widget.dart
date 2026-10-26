@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/card_model.dart';
+import '../models/game_type.dart';
 
 class TiltableCardWidget extends StatefulWidget {
   final CardModel card;
@@ -170,14 +171,12 @@ class _TiltableCardWidgetState extends State<TiltableCardWidget>
       width: widget.width,
       height: widget.height,
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E2E),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12, width: 2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.5),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -186,24 +185,249 @@ class _TiltableCardWidgetState extends State<TiltableCardWidget>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            CachedNetworkImage(
-              imageUrl: widget.card.gameType.defaultCardBackUrl,
-              fit: BoxFit.cover,
-              errorWidget: (context, url, error) => Center(
-                child: Text(
-                  widget.card.gameType.title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white54,
-                  ),
-                ),
+            // Procedural stylized Card Back by Game
+            _buildProceduralGameCardBack(widget.card.gameType),
+
+            // Optional online image overlay if available
+            if (widget.card.gameType.defaultCardBackUrl.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: widget.card.gameType.defaultCardBackUrl,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                placeholder: (_, __) => const SizedBox.shrink(),
               ),
-            ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildProceduralGameCardBack(GameType game) {
+    switch (game) {
+      case GameType.onepiece:
+        return Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF071426), Color(0xFF0F2647), Color(0xFF071426)],
+            ),
+            border: Border.all(color: const Color(0xFFD4AF37), width: 3.5),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFD4AF37), width: 2.5),
+                    color: const Color(0xFF0A1C36),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.anchor_rounded,
+                      size: 44,
+                      color: Color(0xFFD4AF37),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'ONE PIECE',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 3,
+                    color: Color(0xFFD4AF37),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'CARD GAME',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case GameType.riftbound:
+        return Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF03141F), Color(0xFF0B2E42), Color(0xFF03141F)],
+            ),
+            border: Border.all(color: const Color(0xFF00E5FF), width: 3),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFF00E5FF), width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF00E5FF).withOpacity(0.35),
+                        blurRadius: 15,
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.change_history_rounded,
+                      size: 46,
+                      color: Color(0xFF00E5FF),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'RIFTBOUND',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 3,
+                    color: Color(0xFF00E5FF),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'LEAGUE OF LEGENDS TCG',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    color: Colors.white60,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case GameType.magic:
+        return Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1B1410), Color(0xFF2C221B), Color(0xFF1B1410)],
+            ),
+            border: Border.all(color: const Color(0xFF9E784F), width: 4),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 5 Mana dots representation
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    CircleAvatar(radius: 6, backgroundColor: Colors.amberAccent),
+                    SizedBox(width: 6),
+                    CircleAvatar(radius: 6, backgroundColor: Colors.blueAccent),
+                    SizedBox(width: 6),
+                    CircleAvatar(radius: 6, backgroundColor: Colors.purpleAccent),
+                    SizedBox(width: 6),
+                    CircleAvatar(radius: 6, backgroundColor: Colors.redAccent),
+                    SizedBox(width: 6),
+                    CircleAvatar(radius: 6, backgroundColor: Colors.greenAccent),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Magic',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    color: Color(0xFFE85D04),
+                  ),
+                ),
+                const Text(
+                  'THE GATHERING',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                    color: Color(0xFFC7A27C),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case GameType.pokemon:
+        return Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF15449A), Color(0xFF0F2B66)],
+            ),
+            border: Border.all(color: const Color(0xFFFFCB05), width: 3.5),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Stylized Pokeball
+                Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFFCB05), width: 3),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFFEE1515), Color(0xFFF5F5F5)],
+                      stops: [0.5, 0.5],
+                    ),
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        border: Border.all(color: Colors.black, width: 3),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'POKÉMON',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 3,
+                    color: Color(0xFFFFCB05),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+    }
   }
 
   Widget _buildHolographicFoilOverlay() {

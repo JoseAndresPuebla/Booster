@@ -8,8 +8,58 @@ import '../../models/game_type.dart';
 
 class PokemonTcgDexService {
   static final Map<String, List<CardModel>> _cachedCardsBySet = {};
+  static List<CardSet>? _cachedSets;
 
-  static Future<List<CardSet>> getPopularSets() async {
+  /// Fetches ALL official Pokémon TCG sets dynamically from TcgDex
+  static Future<List<CardSet>> getAllSets() async {
+    if (_cachedSets != null && _cachedSets!.isNotEmpty) {
+      return _cachedSets!;
+    }
+
+    try {
+      final res = await http.get(Uri.parse('${ApiConstants.tcgdexBaseUrl}/sets'));
+
+      if (res.statusCode == 200) {
+        final list = jsonDecode(res.body) as List<dynamic>? ?? [];
+
+        final sets = list
+            .where((item) {
+              final countMap = item['cardCount'] as Map<String, dynamic>?;
+              final total = countMap?['total'] as int? ?? 0;
+              // Ignore promo single cards or miscellaneous sets
+              return total >= 30;
+            })
+            .map((item) {
+              final id = item['id'] as String;
+              final name = item['name'] as String;
+              final countMap = item['cardCount'] as Map<String, dynamic>?;
+              final total = countMap?['total'] as int? ?? 0;
+              final logo = item['logo'] as String?;
+
+              return CardSet(
+                id: 'pkm_$id',
+                code: id,
+                name: name,
+                gameType: GameType.pokemon,
+                totalCards: total,
+                iconUrl: logo != null ? '$logo.webp' : null,
+              );
+            })
+            .toList();
+
+        // Reverse to show newest sets first
+        final reversed = sets.reversed.toList();
+        _cachedSets = reversed;
+        return reversed;
+      }
+    } catch (e) {
+      debugPrint('Error fetching Pokemon sets from TcgDex: $e');
+    }
+
+    return getFallbackSets();
+  }
+
+  static List<CardSet> getFallbackSets() {
     return const [
       CardSet(
         id: 'me',
@@ -18,8 +68,6 @@ class PokemonTcgDexService {
         gameType: GameType.pokemon,
         totalCards: 165,
         releaseDate: '2023-09-22',
-        boosterArtUrl:
-            'https://assets.tcgdex.net/en/sv/sv03.5/logo.webp',
       ),
       CardSet(
         id: 'surging',
@@ -28,8 +76,6 @@ class PokemonTcgDexService {
         gameType: GameType.pokemon,
         totalCards: 191,
         releaseDate: '2024-11-08',
-        boosterArtUrl:
-            'https://assets.tcgdex.net/en/sv/sv08/logo.webp',
       ),
       CardSet(
         id: 'zenith',
@@ -38,8 +84,6 @@ class PokemonTcgDexService {
         gameType: GameType.pokemon,
         totalCards: 160,
         releaseDate: '2023-01-20',
-        boosterArtUrl:
-            'https://assets.tcgdex.net/en/swsh/swsh12.5/logo.webp',
       ),
       CardSet(
         id: 'base1',
@@ -48,122 +92,75 @@ class PokemonTcgDexService {
         gameType: GameType.pokemon,
         totalCards: 102,
         releaseDate: '1999-01-09',
-        boosterArtUrl:
-            'https://assets.tcgdex.net/en/base/base1/logo.webp',
       ),
     ];
   }
 
+  /// Fetches real cards for the chosen set using TcgDex API
   static Future<List<CardModel>> getCardsForSet(String setCode) async {
-    if (_cachedCardsBySet.containsKey(setCode) &&
-        _cachedCardsBySet[setCode]!.isNotEmpty) {
-      return _cachedCardsBySet[setCode]!;
+    final cleanCode = setCode.toLowerCase().trim();
+
+    if (_cachedCardsBySet.containsKey(cleanCode) &&
+        _cachedCardsBySet[cleanCode]!.isNotEmpty) {
+      return _cachedCardsBySet[cleanCode]!;
     }
 
     try {
-      final url = Uri.parse('${ApiConstants.tcgdexBaseUrl}/sets/$setCode');
+      final url = Uri.parse('${ApiConstants.tcgdexBaseUrl}/sets/$cleanCode');
       final res = await http.get(url);
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         final cardsList = data['cards'] as List<dynamic>? ?? [];
 
-        final cards = cardsList.map((item) {
+        final cards = <CardModel>[];
+
+        for (final item in cardsList) {
           final localId = item['localId']?.toString() ?? '1';
-          final cardId = item['id']?.toString() ?? '$setCode-$localId';
+          final cardId = item['id']?.toString() ?? '$cleanCode-$localId';
           final name = item['name'] as String? ?? 'Pokémon';
           final imageBase = item['image'] as String?;
 
-          final imgUrl = imageBase != null
-              ? '$imageBase/high.webp'
-              : GameType.pokemon.defaultCardBackUrl;
+          if (imageBase == null) continue;
+
+          final imgUrl = '$imageBase/high.webp';
 
           // Estimate rarity
           Rarity rarity = Rarity.common;
           final int numId = int.tryParse(localId) ?? 50;
           if (numId > 165) {
             rarity = Rarity.secretRare;
-          } else if (numId > 140) {
+          } else if (numId > 135) {
             rarity = Rarity.ultraRare;
-          } else if (numId > 100) {
+          } else if (numId > 90) {
             rarity = Rarity.rare;
-          } else if (numId > 50) {
+          } else if (numId > 45) {
             rarity = Rarity.uncommon;
           }
 
-          return CardModel(
+          cards.add(CardModel(
             id: 'pkm_$cardId',
             name: name,
             gameType: GameType.pokemon,
-            setCode: setCode,
-            setName: data['name'] as String? ?? setCode,
+            setCode: cleanCode,
+            setName: data['name'] as String? ?? cleanCode,
             cardNumber: localId,
             rarity: rarity,
             imageUrl: imgUrl,
             imageHighResUrl: imgUrl,
             foilType: rarity.tier >= 3 ? 'holo' : 'none',
-          );
-        }).toList();
+          ));
+        }
 
-        _cachedCardsBySet[setCode] = cards;
-        return cards;
+        if (cards.isNotEmpty) {
+          _cachedCardsBySet[cleanCode] = cards;
+          return cards;
+        }
       }
     } catch (e) {
       debugPrint('Error fetching Pokémon cards: $e');
     }
 
-    return _getFallbackPokemonCards(setCode);
-  }
-
-  static List<CardModel> _getFallbackPokemonCards(String setCode) {
-    return [
-      CardModel(
-        id: 'pkm_flb_charizard',
-        name: 'Charizard EX',
-        gameType: GameType.pokemon,
-        setCode: setCode,
-        setName: 'Pokémon 151',
-        cardNumber: '006',
-        rarity: Rarity.secretRare,
-        imageUrl:
-            'https://assets.tcgdex.net/en/sv/sv03.5/006/high.webp',
-        foilType: 'rainbow',
-      ),
-      CardModel(
-        id: 'pkm_flb_pikachu',
-        name: 'Pikachu',
-        gameType: GameType.pokemon,
-        setCode: setCode,
-        setName: 'Pokémon 151',
-        cardNumber: '025',
-        rarity: Rarity.rare,
-        imageUrl:
-            'https://assets.tcgdex.net/en/sv/sv03.5/025/high.webp',
-        foilType: 'holo',
-      ),
-      CardModel(
-        id: 'pkm_flb_mew',
-        name: 'Mew EX',
-        gameType: GameType.pokemon,
-        setCode: setCode,
-        setName: 'Pokémon 151',
-        cardNumber: '151',
-        rarity: Rarity.ultraRare,
-        imageUrl:
-            'https://assets.tcgdex.net/en/sv/sv03.5/151/high.webp',
-        foilType: 'holo',
-      ),
-      CardModel(
-        id: 'pkm_flb_squirtle',
-        name: 'Squirtle',
-        gameType: GameType.pokemon,
-        setCode: setCode,
-        setName: 'Pokémon 151',
-        cardNumber: '007',
-        rarity: Rarity.common,
-        imageUrl:
-            'https://assets.tcgdex.net/en/sv/sv03.5/007/high.webp',
-      ),
-    ];
+    return [];
   }
 }

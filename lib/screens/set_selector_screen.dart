@@ -20,6 +20,7 @@ class SetSelectorScreen extends StatefulWidget {
 class _SetSelectorScreenState extends State<SetSelectorScreen> {
   List<CardSet> _sets = [];
   bool _isLoading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -114,16 +115,57 @@ class _SetSelectorScreenState extends State<SetSelectorScreen> {
                   ),
                 ),
 
+                // Search Field
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  child: TextField(
+                    onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar expansión por nombre o código...',
+                      hintStyle: const TextStyle(fontSize: 13, color: Colors.white38),
+                      prefixIcon: const Icon(Icons.search, size: 18),
+                      filled: true,
+                      fillColor: AppTheme.surfaceLight,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.all(12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ),
+
                 const Divider(color: Colors.white10),
 
                 // Set List
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(20),
-                    itemCount: _sets.length,
-                    itemBuilder: (context, index) {
-                      final item = _sets[index];
-                      return _buildSetCard(item);
+                  child: Builder(
+                    builder: (context) {
+                      final filtered = _sets.where((s) {
+                        if (_searchQuery.isEmpty) return true;
+                        final q = _searchQuery.toLowerCase();
+                        return s.name.toLowerCase().contains(q) ||
+                            s.code.toLowerCase().contains(q);
+                      }).toList();
+
+                      if (filtered.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'No se encontraron expansiones',
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(20),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final item = filtered[index];
+                          return _buildSetCard(item);
+                        },
+                      );
                     },
                   ),
                 ),

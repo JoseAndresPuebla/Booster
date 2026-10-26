@@ -16,13 +16,13 @@ class PackGeneratorService {
   static Future<List<CardSet>> getSetsForGame(GameType game) async {
     switch (game) {
       case GameType.pokemon:
-        return PokemonTcgDexService.getPopularSets();
+        return PokemonTcgDexService.getAllSets();
       case GameType.magic:
-        return MagicScryfallService.getPopularSets();
+        return MagicScryfallService.getAllSets();
       case GameType.onepiece:
-        return OnePieceApiService.getPopularSets();
+        return OnePieceApiService.getAllSets();
       case GameType.riftbound:
-        return RiftboundService.getPopularSets();
+        return RiftboundService.getAllSets();
     }
   }
 
