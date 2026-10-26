@@ -443,10 +443,78 @@ class MagicScryfallService {
     ),
   ];
 
-  /// Returns ALL official Magic sets immediately with verified MTG booster wrappers
+  static final Map<String, String> _knownBoosterArts = {
+    for (final s in officialSets)
+      if (s.boosterArtUrl != null && s.boosterArtUrl!.isNotEmpty)
+        s.code.toLowerCase(): s.boosterArtUrl!,
+  };
+
+  /// Returns ALL official Magic sets dynamically from Scryfall API,
+  /// matching booster pack wrappers where available, and falling back to officialSets offline.
   static Future<List<CardSet>> getAllSets() async {
     if (_cachedSets != null && _cachedSets!.isNotEmpty) {
       return _cachedSets!;
+    }
+
+    try {
+      final res = await http.get(
+        Uri.parse('${ApiConstants.scryfallBaseUrl}/sets'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final list = data['data'] as List<dynamic>? ?? [];
+
+        final sets = <CardSet>[];
+        final now = DateTime.now();
+
+        for (final item in list) {
+          if (item is! Map<String, dynamic>) continue;
+          final code = item['code']?.toString() ?? '';
+          final name = item['name']?.toString() ?? code;
+          final count = item['card_count'] as int? ?? 0;
+          final type = item['set_type']?.toString() ?? '';
+          final release = item['released_at']?.toString();
+          final iconSvg = item['icon_svg_uri']?.toString();
+
+          if (count < 10) continue;
+          if (release != null) {
+            final rel = DateTime.tryParse(release);
+            if (rel != null && rel.isAfter(now)) continue;
+          }
+
+          final isStandardSet = type == 'expansion' ||
+              type == 'core' ||
+              type == 'masters' ||
+              type == 'draft_innovation' ||
+              type == 'funny';
+
+          if (!isStandardSet) continue;
+
+          final cleanCode = code.toLowerCase();
+          final boosterArt = _knownBoosterArts[cleanCode];
+
+          sets.add(CardSet(
+            id: 'mtg_$code',
+            code: code,
+            name: name,
+            gameType: GameType.magic,
+            totalCards: count,
+            releaseDate: release,
+            iconUrl: iconSvg,
+            boosterArtUrl:
+                boosterArt, // Null if no cover, BoosterPackWidget renders procedural
+          ));
+        }
+
+        if (sets.isNotEmpty) {
+          _cachedSets = sets;
+          return sets;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching MTG sets from Scryfall: $e');
     }
 
     _cachedSets = List<CardSet>.from(officialSets);

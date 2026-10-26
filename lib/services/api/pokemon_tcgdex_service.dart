@@ -359,10 +359,63 @@ class PokemonTcgDexService {
     ),
   ];
 
-  /// Returns ALL official Pokémon sets immediately with verified booster packshots
+  static final Map<String, String> _knownBoosterArts = {
+    for (final s in officialSets)
+      if (s.boosterArtUrl != null && s.boosterArtUrl!.isNotEmpty)
+        s.code.toLowerCase(): s.boosterArtUrl!,
+  };
+
+  /// Returns ALL official Pokémon sets dynamically from TcgDex API,
+  /// matching booster pack wrappers where available, and falling back to officialSets offline.
   static Future<List<CardSet>> getAllSets() async {
     if (_cachedSets != null && _cachedSets!.isNotEmpty) {
       return _cachedSets!;
+    }
+
+    try {
+      final res = await http.get(
+        Uri.parse('${ApiConstants.tcgdexBaseUrl}/sets'),
+        headers: {'User-Agent': 'BoosterTCG/1.0'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        final list = jsonDecode(res.body) as List<dynamic>? ?? [];
+
+        final sets = <CardSet>[];
+        for (final item in list) {
+          if (item is! Map<String, dynamic>) continue;
+          final id = (item['id']?.toString() ?? '').toLowerCase().trim();
+          final name = item['name']?.toString() ?? id;
+          final countMap = item['cardCount'] as Map<String, dynamic>?;
+          final total =
+              countMap?['total'] as int? ?? countMap?['official'] as int? ?? 0;
+          final logo = item['logo'] as String?;
+
+          // Ignore empty demo/promo lists, but DO NOT filter out sets lacking booster art
+          if (total < 10 || id == '30th-c' || id.contains('demo')) continue;
+
+          final boosterArt = _knownBoosterArts[id];
+
+          sets.add(CardSet(
+            id: 'pkm_$id',
+            code: id,
+            name: name,
+            gameType: GameType.pokemon,
+            totalCards: total,
+            iconUrl: logo != null ? '$logo.webp' : null,
+            boosterArtUrl:
+                boosterArt, // Null if no cover, BoosterPackWidget renders procedural
+          ));
+        }
+
+        if (sets.isNotEmpty) {
+          final reversed = sets.reversed.toList();
+          _cachedSets = reversed;
+          return reversed;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching Pokemon sets from TcgDex: $e');
     }
 
     _cachedSets = List<CardSet>.from(officialSets);

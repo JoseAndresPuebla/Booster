@@ -8,6 +8,7 @@ import 'api/magic_scryfall_service.dart';
 import 'api/pokemon_tcgdex_service.dart';
 import 'api/onepiece_api_service.dart';
 import 'api/riftbound_service.dart';
+import 'api/wwe_topps_service.dart';
 
 class PackGeneratorService {
   static final Random _random = Random();
@@ -23,6 +24,8 @@ class PackGeneratorService {
         return OnePieceApiService.getAllSets();
       case GameType.riftbound:
         return RiftboundService.getAllSets();
+      case GameType.wwe:
+        return WweToppsService.getAllSets();
     }
   }
 
@@ -38,6 +41,8 @@ class PackGeneratorService {
         return OnePieceApiService.getCardsForSet(setCode);
       case GameType.riftbound:
         return RiftboundService.getCardsForSet(setCode);
+      case GameType.wwe:
+        return WweToppsService.getCardsForSet(setCode);
     }
   }
 

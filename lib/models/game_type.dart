@@ -5,7 +5,8 @@ enum GameType {
   pokemon('pokemon', 'Pokémon TCG', 'Pókemon Pocket Edition', AppTheme.pokemonColor),
   magic('magic', 'Magic: The Gathering', 'Multiverse Booster Packs', AppTheme.magicColor),
   riftbound('riftbound', 'Riftbound TCG', 'Runeterra Universe Battles', AppTheme.riftboundColor),
-  onepiece('onepiece', 'One Piece Card Game', 'Grand Line Booster Series', AppTheme.onepieceColor);
+  onepiece('onepiece', 'One Piece Card Game', 'Grand Line Booster Series', AppTheme.onepieceColor),
+  wwe('wwe', 'WWE Trading Cards', 'Topps & Panini Superstars', AppTheme.wweColor);
 
   final String key;
   final String title;
@@ -32,6 +33,8 @@ enum GameType {
         return 'https://onepiece-cardgame.dev/images/card-back.png';
       case GameType.riftbound:
         return 'https://www.riftbound-db.com/images/card-back.png';
+      case GameType.wwe:
+        return '';
     }
   }
 }

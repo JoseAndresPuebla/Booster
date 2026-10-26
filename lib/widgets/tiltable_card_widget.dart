@@ -530,6 +530,70 @@ class _TiltableCardWidgetState extends State<TiltableCardWidget>
           ),
         );
 
+      case GameType.wwe:
+        return Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF0F0B0B), Color(0xFF2B0A0D), Color(0xFF140507)],
+            ),
+            border: Border.all(color: const Color(0xFFFFD700), width: 3.5),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFFD700), width: 2.5),
+                    gradient: const RadialGradient(
+                      colors: [Color(0xFF3A0D11), Color(0xFF120305)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.redAccent.withOpacity(0.3),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.military_tech_rounded,
+                      size: 46,
+                      color: Color(0xFFFFD700),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'W W E',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 6,
+                    color: Color(0xFFFFD700),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'TRADING CARDS',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2.5,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
       case GameType.pokemon:
         return Container(
           decoration: BoxDecoration(

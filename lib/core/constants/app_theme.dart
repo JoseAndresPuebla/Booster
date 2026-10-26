@@ -21,6 +21,9 @@ class AppTheme {
   static const Color onepieceColor = Color(0xFFFF1744);
   static const Color onepieceAccent = Color(0xFFD50000);
 
+  static const Color wweColor = Color(0xFFD32F2F);
+  static const Color wweAccent = Color(0xFFFFD700);
+
   // Rarity Colors
   static const Color rarityCommon = Color(0xFF9E9E9E);
   static const Color rarityUncommon = Color(0xFF26A69A);
