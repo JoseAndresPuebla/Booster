@@ -129,59 +129,173 @@ class MagicScryfallService {
 
     try {
       final url = Uri.parse(
-          '${ApiConstants.scryfallBaseUrl}/cards/search?q=set:$cleanCode+is:booster&order=rarity');
+          '${ApiConstants.scryfallBaseUrl}/cards/search?q=set:$cleanCode&order=rarity');
       final res = await http.get(url, headers: _headers);
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         final list = data['data'] as List<dynamic>? ?? [];
 
-        final cards = <CardModel>[];
-
-        for (final item in list) {
-          final imageUris = item['image_uris'] as Map<String, dynamic>? ??
-              (item['card_faces'] != null && (item['card_faces'] as List).isNotEmpty
-                  ? (item['card_faces'][0]['image_uris'] as Map<String, dynamic>?)
-                  : null);
-
-          final normalUrl = imageUris?['normal'] as String?;
-          final largeUrl = imageUris?['large'] as String? ?? normalUrl;
-
-          if (normalUrl == null) continue;
-
-          final rarityStr = item['rarity'] as String? ?? 'common';
-          final name = item['name'] as String? ?? 'Magic Card';
-          final num = item['collector_number']?.toString() ?? '1';
-
-          cards.add(CardModel(
-            id: 'mtg_${item['id']}',
-            name: name,
-            gameType: GameType.magic,
-            setCode: cleanCode.toUpperCase(),
-            setName: item['set_name'] as String? ?? cleanCode.toUpperCase(),
-            cardNumber: num,
-            rarity: Rarity.fromString(rarityStr),
-            imageUrl: normalUrl,
-            imageHighResUrl: largeUrl,
-            foilType: item['foil'] == true ? 'holo' : 'none',
-            extraData: {
-              'mana_cost': item['mana_cost'] ?? '',
-              'type_line': item['type_line'] ?? '',
-            },
-          ));
-        }
-
+        final cards = _parseScryfallCards(list, cleanCode);
         if (cards.isNotEmpty) {
           _cachedCardsBySet[cleanCode] = cards;
           return cards;
         }
       } else {
-        debugPrint('Scryfall returned status ${res.statusCode}: ${res.body}');
+        debugPrint('Scryfall returned status ${res.statusCode} for set $cleanCode');
       }
     } catch (e) {
       debugPrint('Error fetching MTG cards for set $cleanCode: $e');
     }
 
-    return [];
+    final fallbacks = _buildFallbackCards(cleanCode);
+    _cachedCardsBySet[cleanCode] = fallbacks;
+    return fallbacks;
+  }
+
+  static List<CardModel> _parseScryfallCards(List<dynamic> list, String cleanCode) {
+    final cards = <CardModel>[];
+
+    for (final item in list) {
+      final imageUris = item['image_uris'] as Map<String, dynamic>? ??
+          (item['card_faces'] != null && (item['card_faces'] as List).isNotEmpty
+              ? (item['card_faces'][0]['image_uris'] as Map<String, dynamic>?)
+              : null);
+
+      final normalUrl = imageUris?['normal'] as String?;
+      final largeUrl = imageUris?['large'] as String? ?? normalUrl;
+
+      if (normalUrl == null) continue;
+
+      final rarityStr = item['rarity'] as String? ?? 'common';
+      final name = item['name'] as String? ?? 'Magic Card';
+      final num = item['collector_number']?.toString() ?? '1';
+
+      cards.add(CardModel(
+        id: 'mtg_${item['id']}',
+        name: name,
+        gameType: GameType.magic,
+        setCode: cleanCode.toUpperCase(),
+        setName: item['set_name'] as String? ?? cleanCode.toUpperCase(),
+        cardNumber: num,
+        rarity: Rarity.fromString(rarityStr),
+        imageUrl: normalUrl,
+        imageHighResUrl: largeUrl,
+        foilType: item['foil'] == true ? 'holo' : 'none',
+        extraData: {
+          'mana_cost': item['mana_cost'] ?? '',
+          'type_line': item['type_line'] ?? '',
+        },
+      ));
+    }
+
+    return cards;
+  }
+
+  static List<CardModel> _buildFallbackCards(String code) {
+    final upper = code.toUpperCase();
+    return [
+      CardModel(
+        id: 'mtg_fallback_bolt',
+        name: 'Lightning Bolt',
+        gameType: GameType.magic,
+        setCode: upper,
+        setName: 'MTG Iconic Collection',
+        cardNumber: '001',
+        rarity: Rarity.common,
+        imageUrl: 'https://cards.scryfall.io/normal/front/f/2/f29ba16f-c8fb-42fe-aabf-87089cb214a7.jpg',
+        imageHighResUrl: 'https://cards.scryfall.io/large/front/f/2/f29ba16f-c8fb-42fe-aabf-87089cb214a7.jpg',
+      ),
+      CardModel(
+        id: 'mtg_fallback_counterspell',
+        name: 'Counterspell',
+        gameType: GameType.magic,
+        setCode: upper,
+        setName: 'MTG Iconic Collection',
+        cardNumber: '002',
+        rarity: Rarity.common,
+        imageUrl: 'https://cards.scryfall.io/normal/front/4/f/4f0ba07f-de7a-4221-a392-60f1ad788647.jpg',
+        imageHighResUrl: 'https://cards.scryfall.io/large/front/4/f/4f0ba07f-de7a-4221-a392-60f1ad788647.jpg',
+      ),
+      CardModel(
+        id: 'mtg_fallback_dark_ritual',
+        name: 'Dark Ritual',
+        gameType: GameType.magic,
+        setCode: upper,
+        setName: 'MTG Iconic Collection',
+        cardNumber: '003',
+        rarity: Rarity.common,
+        imageUrl: 'https://cards.scryfall.io/normal/front/9/5/95f27eeb-6f14-4db3-adb9-9be5ed76b34b.jpg',
+        imageHighResUrl: 'https://cards.scryfall.io/large/front/9/5/95f27eeb-6f14-4db3-adb9-9be5ed76b34b.jpg',
+      ),
+      CardModel(
+        id: 'mtg_fallback_swords',
+        name: 'Swords to Plowshares',
+        gameType: GameType.magic,
+        setCode: upper,
+        setName: 'MTG Iconic Collection',
+        cardNumber: '004',
+        rarity: Rarity.uncommon,
+        imageUrl: 'https://cards.scryfall.io/normal/front/7/d/7d839f21-68c7-47db-8407-ff3e2c3e13b4.jpg',
+        imageHighResUrl: 'https://cards.scryfall.io/large/front/7/d/7d839f21-68c7-47db-8407-ff3e2c3e13b4.jpg',
+      ),
+      CardModel(
+        id: 'mtg_fallback_demonic_tutor',
+        name: 'Demonic Tutor',
+        gameType: GameType.magic,
+        setCode: upper,
+        setName: 'MTG Iconic Collection',
+        cardNumber: '005',
+        rarity: Rarity.uncommon,
+        imageUrl: 'https://cards.scryfall.io/normal/front/9/9/99d3a778-be76-47b7-b089-6e3e5b3ee0b7.jpg',
+        imageHighResUrl: 'https://cards.scryfall.io/large/front/9/9/99d3a778-be76-47b7-b089-6e3e5b3ee0b7.jpg',
+      ),
+      CardModel(
+        id: 'mtg_fallback_birds',
+        name: 'Birds of Paradise',
+        gameType: GameType.magic,
+        setCode: upper,
+        setName: 'MTG Iconic Collection',
+        cardNumber: '006',
+        rarity: Rarity.rare,
+        imageUrl: 'https://cards.scryfall.io/normal/front/f/e/feefe9f0-24a6-461c-9ef1-86c5a6f33b83.jpg',
+        imageHighResUrl: 'https://cards.scryfall.io/large/front/f/e/feefe9f0-24a6-461c-9ef1-86c5a6f33b83.jpg',
+      ),
+      CardModel(
+        id: 'mtg_fallback_wrath',
+        name: 'Wrath of God',
+        gameType: GameType.magic,
+        setCode: upper,
+        setName: 'MTG Iconic Collection',
+        cardNumber: '007',
+        rarity: Rarity.rare,
+        imageUrl: 'https://cards.scryfall.io/normal/front/6/6/664e6656-36a3-4635-9f33-9289fe12fe8a.jpg',
+        imageHighResUrl: 'https://cards.scryfall.io/large/front/6/6/664e6656-36a3-4635-9f33-9289fe12fe8a.jpg',
+      ),
+      CardModel(
+        id: 'mtg_fallback_lotus',
+        name: 'Black Lotus',
+        gameType: GameType.magic,
+        setCode: upper,
+        setName: 'MTG Iconic Collection',
+        cardNumber: '008',
+        rarity: Rarity.ultraRare,
+        foilType: 'holo',
+        imageUrl: 'https://cards.scryfall.io/normal/front/b/d/bd8fa327-dd41-4737-8f19-2cf5eb1f7cdd.jpg',
+        imageHighResUrl: 'https://cards.scryfall.io/large/front/b/d/bd8fa327-dd41-4737-8f19-2cf5eb1f7cdd.jpg',
+      ),
+      CardModel(
+        id: 'mtg_fallback_ring',
+        name: 'The One Ring',
+        gameType: GameType.magic,
+        setCode: upper,
+        setName: 'MTG Iconic Collection',
+        cardNumber: '009',
+        rarity: Rarity.secretRare,
+        foilType: 'holo',
+        imageUrl: 'https://cards.scryfall.io/normal/front/9/3/93de71d0-b0b7-4730-8d07-648e4894f380.jpg',
+        imageHighResUrl: 'https://cards.scryfall.io/large/front/9/3/93de71d0-b0b7-4730-8d07-648e4894f380.jpg',
+      ),
+    ];
   }
 }

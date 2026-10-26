@@ -71,6 +71,7 @@ class PackGeneratorService {
     }
 
     final List<CardModel> pack = [];
+    final Set<String> pickedCardIds = {};
 
     // 1. Check for God Pack (0.5% chance where all 5 cards are Ultra or Secret Rare)
     final bool isGodPack =
@@ -80,18 +81,26 @@ class PackGeneratorService {
       for (int i = 0; i < blueprint.cardsPerPack; i++) {
         final highTier = _random.nextBool() ? Rarity.ultraRare : Rarity.secretRare;
         final list = byRarity[highTier]!;
-        pack.add(list[_random.nextInt(list.length)]);
+        final nonDup = list.where((c) => !pickedCardIds.contains(c.id)).toList();
+        final pickPool = nonDup.isNotEmpty ? nonDup : list;
+        final picked = pickPool[_random.nextInt(pickPool.length)];
+        pickedCardIds.add(picked.id);
+        pack.add(picked);
       }
       return pack;
     }
 
-    // 2. Standard slot-by-slot generation
+    // 2. Standard slot-by-slot generation (No duplicates in same pack)
     for (int slot = 0; slot < blueprint.cardsPerPack; slot++) {
       final rule = blueprint.slotRules[slot];
       final targetRarity = rule.rollRarity(_random);
 
       final candidates = byRarity[targetRarity]!;
-      final picked = candidates[_random.nextInt(candidates.length)];
+      final nonDup = candidates.where((c) => !pickedCardIds.contains(c.id)).toList();
+      final pickPool = nonDup.isNotEmpty ? nonDup : candidates;
+
+      final picked = pickPool[_random.nextInt(pickPool.length)];
+      pickedCardIds.add(picked.id);
       pack.add(picked);
     }
 

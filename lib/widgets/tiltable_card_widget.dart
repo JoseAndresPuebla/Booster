@@ -193,8 +193,8 @@ class _TiltableCardWidgetState extends State<TiltableCardWidget>
               CachedNetworkImage(
                 imageUrl: widget.card.gameType.defaultCardBackUrl,
                 fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => const SizedBox.shrink(),
-                placeholder: (_, __) => const SizedBox.shrink(),
+                errorWidget: (context, url, error) => const SizedBox.shrink(),
+                placeholder: (context, url) => const SizedBox.shrink(),
               ),
           ],
         ),

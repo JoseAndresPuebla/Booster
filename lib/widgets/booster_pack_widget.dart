@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/card_set.dart';
@@ -51,6 +52,19 @@ class _BoosterPackWidgetState extends State<BoosterPackWidget>
       HapticFeedback.heavyImpact();
       widget.onTearComplete();
     }
+  }
+
+  Widget _buildFallbackEmblem() {
+    return Center(
+      child: Text(
+        widget.cardSet.code.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+        ),
+      ),
+    );
   }
 
   @override
@@ -155,11 +169,11 @@ class _BoosterPackWidgetState extends State<BoosterPackWidget>
                   // Center Logo / Pack Emblem
                   Center(
                     child: Container(
-                      width: 110,
-                      height: 110,
+                      width: 120,
+                      height: 120,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.black38,
+                        color: Colors.black45,
                         border: Border.all(
                           color: widget.cardSet.gameType.primaryColor,
                           width: 3,
@@ -168,19 +182,23 @@ class _BoosterPackWidgetState extends State<BoosterPackWidget>
                           BoxShadow(
                             color: widget.cardSet.gameType.primaryColor
                                 .withOpacity(0.5),
-                            blurRadius: 15,
+                            blurRadius: 18,
                           ),
                         ],
                       ),
-                      child: Center(
-                        child: Text(
-                          widget.cardSet.code.toUpperCase(),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                          ),
-                        ),
+                      child: ClipOval(
+                        child: widget.cardSet.iconUrl != null &&
+                                widget.cardSet.iconUrl!.isNotEmpty
+                            ? Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: CachedNetworkImage(
+                                  imageUrl: widget.cardSet.iconUrl!,
+                                  fit: BoxFit.contain,
+                                  errorWidget: (context, url, error) => _buildFallbackEmblem(),
+                                  placeholder: (context, url) => _buildFallbackEmblem(),
+                                ),
+                              )
+                            : _buildFallbackEmblem(),
                       ),
                     ),
                   ),

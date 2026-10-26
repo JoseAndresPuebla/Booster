@@ -36,26 +36,33 @@ class _PackOpeningScreenState extends State<PackOpeningScreen> {
   int _currentCardIndex = 0;
   final Set<int> _flippedCards = {};
   bool _isSaving = false;
+  Future<void>? _cardRollFuture;
 
   @override
   void initState() {
     super.initState();
-    _rollCardsEarly();
+    _cardRollFuture = _rollCardsEarly();
   }
 
   // Pre-generate cards immediately so precaching happens during the tear gesture!
   Future<void> _rollCardsEarly() async {
-    final cards = await PackGeneratorService.generateBoosterPack(
-      game: widget.game,
-      cardSet: widget.cardSet,
-    );
+    try {
+      final cards = await PackGeneratorService.generateBoosterPack(
+        game: widget.game,
+        cardSet: widget.cardSet,
+      );
 
-    if (mounted) {
-      setState(() {
-        _packCards = cards;
-      });
-      // Start downloading high-res images in background right now!
-      PackGeneratorService.precachePackImages(context, cards);
+      if (mounted) {
+        setState(() {
+          _packCards = cards;
+        });
+        if (cards.isNotEmpty) {
+          // Start downloading high-res images in background right now!
+          PackGeneratorService.precachePackImages(context, cards);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error generating booster pack: $e');
     }
   }
 
@@ -66,8 +73,16 @@ class _PackOpeningScreenState extends State<PackOpeningScreen> {
 
     HapticFeedback.vibrate();
 
+    // Wait for card generator if it is still fetching
+    if (_packCards.isEmpty && _cardRollFuture != null) {
+      await _cardRollFuture!.timeout(
+        const Duration(seconds: 4),
+        onTimeout: () => null,
+      );
+    }
+
     // Brief suspense delay for the pack burst effect
-    await Future.delayed(const Duration(milliseconds: 900));
+    await Future.delayed(const Duration(milliseconds: 600));
 
     if (mounted) {
       setState(() {
@@ -187,7 +202,31 @@ class _PackOpeningScreenState extends State<PackOpeningScreen> {
 
       case PackOpeningStage.revealing:
         if (_packCards.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.cloud_off_rounded, size: 52, color: Colors.amber),
+                const SizedBox(height: 16),
+                const Text(
+                  'No se pudieron cargar las cartas de esta expansión.',
+                  style: TextStyle(color: Colors.white70, fontSize: 15),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _stage = PackOpeningStage.sealed;
+                    });
+                    _cardRollFuture = _rollCardsEarly();
+                  },
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          );
         }
         return _buildCardRevealView();
 
