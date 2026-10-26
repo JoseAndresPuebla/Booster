@@ -140,8 +140,8 @@ class _TiltableCardWidgetState extends State<TiltableCardWidget>
             CachedNetworkImage(
               imageUrl: widget.card.imageUrl,
               fit: BoxFit.cover,
-              placeholder: (context, url) => _buildCardBack(),
-              errorWidget: (context, url, error) => _buildCardBack(),
+              placeholder: (context, url) => _buildCardPlaceholder(),
+              errorWidget: (context, url, error) => _buildProxyCardFace(),
             ),
 
             // Holographic / Foil Layer if rare or holo
@@ -162,6 +162,163 @@ class _TiltableCardWidgetState extends State<TiltableCardWidget>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCardPlaceholder() {
+    return Container(
+      color: const Color(0xFF151824),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: widget.card.gameType.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                widget.card.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white54,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProxyCardFace() {
+    final game = widget.card.gameType;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            game.primaryColor.withOpacity(0.85),
+            const Color(0xFF10131E),
+            game.primaryColor.withOpacity(0.5),
+          ],
+        ),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header: Set Code & Number
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black45,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  widget.card.setCode.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white70,
+                  ),
+                ),
+              ),
+              Text(
+                '#${widget.card.cardNumber}',
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white70,
+                ),
+              ),
+            ],
+          ),
+
+          const Spacer(),
+
+          // Center Emblem & Name
+          Center(
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black38,
+                border: Border.all(color: game.primaryColor, width: 2),
+              ),
+              child: Icon(
+                widget.card.rarity.tier >= 4
+                    ? Icons.auto_awesome_rounded
+                    : Icons.style_rounded,
+                size: 28,
+                color: widget.card.rarity.tier >= 4
+                    ? Colors.amberAccent
+                    : Colors.white70,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.card.name,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+
+          const Spacer(),
+
+          // Footer: Rarity chip
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: widget.card.rarity.tier >= 4
+                    ? Colors.amber.withOpacity(0.25)
+                    : Colors.white12,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: widget.card.rarity.tier >= 4
+                      ? Colors.amberAccent
+                      : Colors.white30,
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                widget.card.rarity.label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                  color: widget.card.rarity.tier >= 4
+                      ? Colors.amberAccent
+                      : Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

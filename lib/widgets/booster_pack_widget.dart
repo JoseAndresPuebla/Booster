@@ -71,6 +71,8 @@ class _BoosterPackWidgetState extends State<BoosterPackWidget>
   Widget build(BuildContext context) {
     const double packWidth = 260.0;
     const double packHeight = 400.0;
+    final bool hasBoosterArt = widget.cardSet.boosterArtUrl != null &&
+        widget.cardSet.boosterArtUrl!.isNotEmpty;
 
     return Center(
       child: Column(
@@ -93,7 +95,7 @@ class _BoosterPackWidgetState extends State<BoosterPackWidget>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: widget.cardSet.gameType.primaryColor.withOpacity(0.35),
+                  color: widget.cardSet.gameType.primaryColor.withOpacity(0.4),
                   blurRadius: 30,
                   spreadRadius: 2,
                   offset: const Offset(0, 10),
@@ -103,119 +105,183 @@ class _BoosterPackWidgetState extends State<BoosterPackWidget>
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: Stack(
+                fit: StackFit.expand,
                 children: [
+                  // Full-bleed Official Booster Pack Cover Art if available
+                  if (hasBoosterArt)
+                    CachedNetworkImage(
+                      imageUrl: widget.cardSet.boosterArtUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.black38,
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white38,
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => const SizedBox(),
+                    ),
+
+                  // Contrast Vignette Overlay for full-bleed arts
+                  if (hasBoosterArt)
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black54,
+                            Colors.transparent,
+                            Colors.transparent,
+                            Colors.black87,
+                          ],
+                          stops: [0.0, 0.18, 0.75, 1.0],
+                        ),
+                      ),
+                    ),
+
                   // Metallic Foil Texture Shimmer
                   AnimatedBuilder(
                     animation: _shineController,
                     builder: (context, child) {
-                      return Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment(-1.5 + _shineController.value * 3.0, -1),
-                              end: Alignment(-0.5 + _shineController.value * 3.0, 1),
-                              colors: [
-                                Colors.transparent,
-                                Colors.white.withOpacity(0.15),
-                                Colors.white.withOpacity(0.3),
-                                Colors.transparent,
-                              ],
-                            ),
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment(-1.5 + _shineController.value * 3.0, -1),
+                            end: Alignment(-0.5 + _shineController.value * 3.0, 1),
+                            colors: [
+                              Colors.transparent,
+                              Colors.white.withOpacity(0.12),
+                              Colors.white.withOpacity(0.28),
+                              Colors.transparent,
+                            ],
                           ),
                         ),
                       );
                     },
                   ),
 
-                  // Pack Header & Game Branding
-                  Positioned(
-                    top: 50,
-                    left: 20,
-                    right: 20,
-                    child: Column(
-                      children: [
-                        Text(
-                          widget.cardSet.gameType.title.toUpperCase(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2.0,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.black45,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            widget.cardSet.name,
+                  // If NO booster art, render stylized set header & center emblem
+                  if (!hasBoosterArt) ...[
+                    Positioned(
+                      top: 60,
+                      left: 20,
+                      right: 20,
+                      child: Column(
+                        children: [
+                          Text(
+                            widget.cardSet.gameType.title.toUpperCase(),
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white70,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 2.0,
+                              color: Colors.white,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Center Logo / Pack Emblem
-                  Center(
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.black45,
-                        border: Border.all(
-                          color: widget.cardSet.gameType.primaryColor,
-                          width: 3,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: widget.cardSet.gameType.primaryColor
-                                .withOpacity(0.5),
-                            blurRadius: 18,
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black45,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              widget.cardSet.name,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white70,
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      child: ClipOval(
-                        child: widget.cardSet.iconUrl != null &&
-                                widget.cardSet.iconUrl!.isNotEmpty
-                            ? Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: CachedNetworkImage(
-                                  imageUrl: widget.cardSet.iconUrl!,
-                                  fit: BoxFit.contain,
-                                  errorWidget: (context, url, error) => _buildFallbackEmblem(),
-                                  placeholder: (context, url) => _buildFallbackEmblem(),
-                                ),
-                              )
-                            : _buildFallbackEmblem(),
+                    ),
+                    Center(
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.black45,
+                          border: Border.all(
+                            color: widget.cardSet.gameType.primaryColor,
+                            width: 3,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: widget.cardSet.gameType.primaryColor
+                                  .withOpacity(0.5),
+                              blurRadius: 18,
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: widget.cardSet.iconUrl != null &&
+                                  widget.cardSet.iconUrl!.isNotEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: CachedNetworkImage(
+                                    imageUrl: widget.cardSet.iconUrl!,
+                                    fit: BoxFit.contain,
+                                    errorWidget: (context, url, error) =>
+                                        _buildFallbackEmblem(),
+                                    placeholder: (context, url) =>
+                                        _buildFallbackEmblem(),
+                                  ),
+                                )
+                              : _buildFallbackEmblem(),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
+
+                  // Subtle set name pill at bottom if booster art is active
+                  if (hasBoosterArt)
+                    Positioned(
+                      bottom: 45,
+                      left: 20,
+                      right: 20,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white24, width: 0.5),
+                        ),
+                        child: Text(
+                          widget.cardSet.name,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
 
                   // Pack Footer details
                   const Positioned(
-                    bottom: 25,
+                    bottom: 20,
                     left: 0,
                     right: 0,
                     child: Text(
                       '5 CARTAS • 1 RARA GARANTIZADA',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         letterSpacing: 1.5,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white60,
+                        color: Colors.white70,
                       ),
                     ),
                   ),
@@ -225,12 +291,21 @@ class _BoosterPackWidgetState extends State<BoosterPackWidget>
                     top: 0,
                     left: 0,
                     right: 0,
-                    height: 50,
+                    height: 52,
                     child: GestureDetector(
                       onHorizontalDragUpdate: (details) =>
                           _onTearUpdate(details, packWidth),
                       child: Container(
-                        color: Colors.black26,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.45),
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.amberAccent.withOpacity(0.6),
+                              width: 1.5,
+                              style: BorderStyle.solid,
+                            ),
+                          ),
+                        ),
                         child: Stack(
                           children: [
                             // Dotted rip guide line
@@ -264,7 +339,7 @@ class _BoosterPackWidgetState extends State<BoosterPackWidget>
                               widthFactor: _tearProgress,
                               alignment: Alignment.centerLeft,
                               child: Container(
-                                color: Colors.amberAccent.withOpacity(0.5),
+                                color: Colors.amberAccent.withOpacity(0.55),
                               ),
                             ),
                           ],

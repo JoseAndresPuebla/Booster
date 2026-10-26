@@ -14,16 +14,16 @@ enum Rarity {
   static Rarity fromString(String? val) {
     if (val == null) return Rarity.common;
     final lower = val.toLowerCase();
-    if (lower.contains('secret') || lower.contains('alt') || lower.contains('god') || lower.contains('masterpiece')) {
+    if (lower.contains('secret') || lower.contains('alt') || lower.contains('god') || lower.contains('masterpiece') || lower.contains('special') || lower.contains('showcase') || lower == 'sec') {
       return Rarity.secretRare;
     }
-    if (lower.contains('ultra') || lower.contains('mythic') || lower.contains('super') || lower.contains('ex') || lower.contains('sr')) {
+    if (lower.contains('ultra') || lower.contains('mythic') || lower.contains('super') || lower.contains('epic') || lower.contains('leader') || lower == 'sr' || lower.contains(' ex') || lower.endsWith('ex') || lower.contains('ex ')) {
       return Rarity.ultraRare;
     }
-    if (lower.contains('rare') || lower.contains('holo') || lower.contains('r')) {
+    if (lower == 'rare' || lower.contains('rare') || lower.contains('holo') || lower == 'r') {
       return Rarity.rare;
     }
-    if (lower.contains('uncommon') || lower.contains('uc')) {
+    if (lower == 'uncommon' || lower.contains('uncommon') || lower == 'uc') {
       return Rarity.uncommon;
     }
     return Rarity.common;

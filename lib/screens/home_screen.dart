@@ -23,6 +23,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadProfileData();
+    // Silent update check after UI settles
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) _checkUpdatesSilently();
+    });
   }
 
   void _loadProfileData() {
@@ -41,6 +45,12 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _checkUpdatesSilently() async {
+    final info = await UpdateService.checkForUpdates();
+    if (!mounted || !info.hasUpdate) return;
+    _showUpdateDialog(info);
+  }
+
   Future<void> _manualCheckUpdates() async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -53,24 +63,88 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
 
     if (info.hasUpdate) {
+      _showUpdateDialog(info);
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('¡Versión ${info.latestVersion} disponible!'),
-          action: SnackBarAction(
-            label: 'Descargar',
+          content: Text('¡Tienes la versión más reciente (v${info.currentVersion})!'),
+        ),
+      );
+    }
+  }
+
+  void _showUpdateDialog(UpdateInfo info) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E2235),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.system_update_rounded, color: AppTheme.pokemonColor),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '¡Actualización v${info.latestVersion}!',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tu versión actual: v${info.currentVersion}',
+              style: const TextStyle(color: Colors.white60, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Novedades:',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                info.releaseNotes.isNotEmpty
+                    ? info.releaseNotes
+                    : 'Nuevas portadas oficiales de sobres, corrección de rarezas y filtros de cartas.',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                maxLines: 8,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Más tarde', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.pokemonColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
             onPressed: () {
+              Navigator.pop(ctx);
               if (info.apkDownloadUrl != null) {
                 UpdateService.launchUpdateUrl(info.apkDownloadUrl!);
               }
             },
+            icon: const Icon(Icons.download_rounded, size: 18),
+            label: const Text('Descargar e Instalar'),
           ),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('¡Tienes la versión más reciente!')),
-      );
-    }
+        ],
+      ),
+    );
   }
 
   @override

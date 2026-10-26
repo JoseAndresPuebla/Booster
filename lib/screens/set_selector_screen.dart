@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../core/constants/app_theme.dart';
 import '../core/constants/api_constants.dart';
@@ -176,6 +177,8 @@ class _SetSelectorScreenState extends State<SetSelectorScreen> {
   }
 
   Widget _buildSetCard(CardSet item) {
+    final bool hasBoosterArt = item.boosterArtUrl != null && item.boosterArtUrl!.isNotEmpty;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -191,65 +194,120 @@ class _SetSelectorScreenState extends State<SetSelectorScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: widget.game.primaryColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    item.code.toUpperCase(),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: widget.game.primaryColor,
-                      fontSize: 13,
+                if (hasBoosterArt)
+                  Container(
+                    width: 50,
+                    height: 74,
+                    margin: const EdgeInsets.only(right: 14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: widget.game.primaryColor.withOpacity(0.5),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.4),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(7),
+                      child: CachedNetworkImage(
+                        imageUrl: item.boosterArtUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (ctx, url) => Container(color: Colors.white10),
+                        errorWidget: (ctx, url, err) => Container(
+                          color: widget.game.primaryColor.withOpacity(0.2),
+                          child: Icon(
+                            Icons.style_rounded,
+                            size: 20,
+                            color: widget.game.primaryColor,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    item.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: widget.game.primaryColor.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              item.code.toUpperCase(),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                color: widget.game.primaryColor,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              item.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          if (item.totalCards > 0) ...[
+                            const Icon(Icons.style_outlined,
+                                size: 13, color: Colors.white54),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${item.totalCards} cartas',
+                              style: const TextStyle(
+                                  fontSize: 11, color: Colors.white54),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                          if (item.releaseDate != null) ...[
+                            const Icon(Icons.calendar_today_rounded,
+                                size: 13, color: Colors.white54),
+                            const SizedBox(width: 4),
+                            Text(
+                              item.releaseDate!,
+                              style: const TextStyle(
+                                  fontSize: 11, color: Colors.white54),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                if (item.totalCards > 0) ...[
-                  const Icon(Icons.style_outlined, size: 14, color: Colors.white54),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${item.totalCards} cartas',
-                    style: const TextStyle(fontSize: 12, color: Colors.white54),
-                  ),
-                  const SizedBox(width: 16),
-                ],
-                if (item.releaseDate != null) ...[
-                  const Icon(Icons.calendar_today_rounded, size: 14, color: Colors.white54),
-                  const SizedBox(width: 4),
-                  Text(
-                    item.releaseDate!,
-                    style: const TextStyle(fontSize: 12, color: Colors.white54),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 46,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: widget.game.primaryColor,

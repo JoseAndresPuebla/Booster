@@ -20,6 +20,8 @@ class RiftboundService {
       gameType: GameType.riftbound,
       totalCards: 352,
       releaseDate: '2024-05-10',
+      boosterArtUrl:
+          'https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/09da06c69d07d4e72dde703737ef167472c715af-1488x2078.png',
     ),
     CardSet(
       id: 'rb_spf',
@@ -28,6 +30,8 @@ class RiftboundService {
       gameType: GameType.riftbound,
       totalCards: 287,
       releaseDate: '2024-10-18',
+      boosterArtUrl:
+          'https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/9019c449004f246de6607bf1829f4f3cabcda200-744x1039.png',
     ),
     CardSet(
       id: 'rb_unl',
@@ -36,6 +40,8 @@ class RiftboundService {
       gameType: GameType.riftbound,
       totalCards: 288,
       releaseDate: '2025-02-14',
+      boosterArtUrl:
+          'https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/9b742ef3dc17f5da03d41e3349839037183b5ea9-744x1039.png',
     ),
     CardSet(
       id: 'rb_vdt',
@@ -44,6 +50,8 @@ class RiftboundService {
       gameType: GameType.riftbound,
       totalCards: 237,
       releaseDate: '2025-06-20',
+      boosterArtUrl:
+          'https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/a14d1be8f014a331f60885013d81a1a8f5c8c076-744x1039.png',
     ),
     CardSet(
       id: 'rb_rad',
@@ -52,6 +60,8 @@ class RiftboundService {
       gameType: GameType.riftbound,
       totalCards: 219,
       releaseDate: '2025-10-15',
+      boosterArtUrl:
+          'https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/e4be56cd7dc8075298567c5b28ecc3e46b87bc57-744x1039.png',
     ),
     CardSet(
       id: 'rb_pvg',
@@ -60,6 +70,8 @@ class RiftboundService {
       gameType: GameType.riftbound,
       totalCards: 24,
       releaseDate: '2024-04-01',
+      boosterArtUrl:
+          'https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/532d75dc36a16eb5954253a77366fcceac7aec62-744x1039.png',
     ),
   ];
 
@@ -114,19 +126,28 @@ class RiftboundService {
       if (img == null || img.isEmpty) continue;
 
       final name = item['fullName'] as String? ?? item['name'] as String? ?? 'Riftbound Card';
-      final rarityRaw = item['rarity'] as String? ?? 'Common';
+      final rarityRaw = (item['rarity'] as String? ?? 'Common').toLowerCase();
       final cardCode = item['cardCode'] as String? ?? item['cardNumber'] as String? ?? '0';
 
+      // Official Riftbound Rarity Mapping
       Rarity r = Rarity.common;
-      final lowerR = rarityRaw.toLowerCase();
-      if (lowerR.contains('showcase') || lowerR.contains('mythic') || lowerR.contains('secret')) {
+      if (rarityRaw.contains('showcase') || rarityRaw.contains('mythic')) {
         r = Rarity.secretRare;
-      } else if (lowerR.contains('epic') || lowerR.contains('champion')) {
+      } else if (rarityRaw.contains('epic') || rarityRaw.contains('champion')) {
         r = Rarity.ultraRare;
-      } else if (lowerR.contains('rare')) {
+      } else if (rarityRaw.contains('rare')) {
         r = Rarity.rare;
-      } else if (lowerR.contains('uncommon')) {
+      } else if (rarityRaw.contains('uncommon')) {
         r = Rarity.uncommon;
+      }
+
+      String foilType = 'none';
+      if (r == Rarity.secretRare) {
+        foilType = 'rainbow';
+      } else if (r == Rarity.ultraRare) {
+        foilType = 'gold';
+      } else if (r == Rarity.rare) {
+        foilType = 'holo';
       }
 
       cards.add(CardModel(
@@ -139,7 +160,7 @@ class RiftboundService {
         rarity: r,
         imageUrl: img,
         imageHighResUrl: img,
-        foilType: r.tier >= 3 ? 'holo' : 'none',
+        foilType: foilType,
         extraData: {
           'domain': item['domain'] ?? '',
           'energy': item['energy'] ?? 0,
@@ -151,8 +172,9 @@ class RiftboundService {
 
     if (cards.isNotEmpty) {
       _cachedCardsBySet[cleanSet] = cards;
+      return cards;
     }
 
-    return cards;
+    return [];
   }
 }
