@@ -11,7 +11,7 @@ class ApiConstants {
   static const String riftboundDbBaseUrl = 'https://www.riftbound-db.com/api';
 
   // GitHub Auto-Updates
-  static const String githubOwner = 'byjos';
+  static const String githubOwner = 'JoseAndresPuebla';
   static const String githubRepo = 'Booster';
   static const String githubLatestReleaseUrl =
       'https://api.github.com/repos/$githubOwner/$githubRepo/releases/latest';
