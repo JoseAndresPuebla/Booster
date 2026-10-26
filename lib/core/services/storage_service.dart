@@ -42,6 +42,14 @@ class StorageService {
     }
   }
 
+  // Admin / Tester bypass check
+  static bool isAdminUser() {
+    final profile = getUserProfile();
+    if (profile == null) return false;
+    final name = profile.nickname.trim().toLowerCase();
+    return name == 'admin01' || name == 'admin' || name == 'tester';
+  }
+
   // Daily Timer: How many packs opened today for a given game
   static int getPacksOpenedToday(GameType game) {
     final todayStr = _getTodayDateString();
@@ -55,6 +63,9 @@ class StorageService {
   }
 
   static int getRemainingPacksToday(GameType game, int maxDaily) {
+    if (isAdminUser()) {
+      return 999; // Unlimited boosters for testing!
+    }
     final opened = getPacksOpenedToday(game);
     final remaining = maxDaily - opened;
     return remaining > 0 ? remaining : 0;

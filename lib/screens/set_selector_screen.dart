@@ -39,12 +39,13 @@ class _SetSelectorScreenState extends State<SetSelectorScreen> {
   }
 
   void _onOpenPack(CardSet cardSet) {
+    final bool isAdmin = StorageService.isAdminUser();
     final remaining = StorageService.getRemainingPacksToday(
       widget.game,
       ApiConstants.dailyPacksPerGame,
     );
 
-    if (remaining <= 0) {
+    if (!isAdmin && remaining <= 0) {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(

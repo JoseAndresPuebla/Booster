@@ -56,17 +56,24 @@ class _DailyTimerBadgeState extends State<DailyTimerBadge> {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasPacks = _remainingPacks > 0;
+    final bool isAdmin = StorageService.isAdminUser();
+    final bool hasPacks = isAdmin || _remainingPacks > 0;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: hasPacks
-            ? Colors.green.withOpacity(0.2)
-            : Colors.redAccent.withOpacity(0.15),
+        color: isAdmin
+            ? Colors.purpleAccent.withOpacity(0.2)
+            : hasPacks
+                ? Colors.green.withOpacity(0.2)
+                : Colors.redAccent.withOpacity(0.15),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: hasPacks ? Colors.greenAccent : Colors.redAccent.withOpacity(0.5),
+          color: isAdmin
+              ? Colors.purpleAccent
+              : hasPacks
+                  ? Colors.greenAccent
+                  : Colors.redAccent.withOpacity(0.5),
           width: 1,
         ),
       ),
@@ -74,19 +81,33 @@ class _DailyTimerBadgeState extends State<DailyTimerBadge> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            hasPacks ? Icons.check_circle_outline_rounded : Icons.access_time_rounded,
+            isAdmin
+                ? Icons.all_inclusive_rounded
+                : hasPacks
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.access_time_rounded,
             size: 14,
-            color: hasPacks ? Colors.greenAccent : Colors.redAccent,
+            color: isAdmin
+                ? Colors.purpleAccent
+                : hasPacks
+                    ? Colors.greenAccent
+                    : Colors.redAccent,
           ),
           const SizedBox(width: 6),
           Text(
-            hasPacks
-                ? '$_remainingPacks/${ApiConstants.dailyPacksPerGame} Sobres'
-                : 'Recarga en ${_formatDuration(_timeRemaining)}',
+            isAdmin
+                ? 'Tester: Ilimitado'
+                : hasPacks
+                    ? '$_remainingPacks/${ApiConstants.dailyPacksPerGame} Sobres'
+                    : 'Recarga en ${_formatDuration(_timeRemaining)}',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: hasPacks ? Colors.greenAccent : Colors.white70,
+              color: isAdmin
+                  ? Colors.purpleAccent
+                  : hasPacks
+                      ? Colors.greenAccent
+                      : Colors.white70,
             ),
           ),
         ],

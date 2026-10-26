@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_theme.dart';
 import '../core/services/storage_service.dart';
+import '../core/services/supabase_service.dart';
 import '../core/services/update_service.dart';
 import '../models/game_type.dart';
 import '../widgets/daily_timer_badge.dart';
@@ -145,15 +146,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildUserHeader() {
+    final bool isAdmin = StorageService.isAdminUser();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.cardBorder),
+        border: Border.all(
+          color: isAdmin ? Colors.purpleAccent.withOpacity(0.5) : AppTheme.cardBorder,
+          width: isAdmin ? 1.5 : 1.0,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: isAdmin
+                ? Colors.purpleAccent.withOpacity(0.15)
+                : Colors.black.withOpacity(0.3),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -163,11 +171,13 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: AppTheme.riftboundColor.withOpacity(0.2),
-            child: const Icon(
-              Icons.person_rounded,
+            backgroundColor: isAdmin
+                ? Colors.purpleAccent.withOpacity(0.2)
+                : AppTheme.riftboundColor.withOpacity(0.2),
+            child: Icon(
+              isAdmin ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
               size: 32,
-              color: AppTheme.riftboundColor,
+              color: isAdmin ? Colors.purpleAccent : AppTheme.riftboundColor,
             ),
           ),
           const SizedBox(width: 16),
@@ -175,12 +185,39 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '¡Hola, $_nickname!',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        '¡Hola, $_nickname!',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isAdmin) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.purpleAccent.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.purpleAccent, width: 0.8),
+                        ),
+                        child: const Text(
+                          'TESTER ∞',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purpleAccent,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -199,6 +236,57 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_rounded, size: 20, color: Colors.white54),
+            tooltip: 'Cambiar apodo',
+            onPressed: _showChangeNicknameDialog,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangeNicknameDialog() {
+    final controller = TextEditingController(text: _nickname);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: const Text('Cambiar Nombre de Usuario'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ingresa tu nuevo apodo.\n(Usa "admin01" para activar el modo de sobres ilimitados)',
+              style: TextStyle(fontSize: 13, color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: 'Ej. admin01',
+                prefixIcon: Icon(Icons.badge_rounded),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty) {
+                Navigator.pop(ctx);
+                await SupabaseService.syncOrCreateProfile(newName);
+                _loadProfileData();
+              }
+            },
+            child: const Text('Guardar'),
           ),
         ],
       ),
