@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants/api_constants.dart';
 
@@ -83,6 +86,59 @@ class UpdateService {
       return remoteParts.length > localParts.length;
     } catch (_) {
       return remote != local;
+    }
+  }
+
+  static Future<void> downloadAndInstallApk({
+    required String url,
+    required void Function(double progress, int receivedBytes, int totalBytes) onProgress,
+    required void Function(String error) onError,
+    required void Function(String filePath) onComplete,
+  }) async {
+    try {
+      final client = http.Client();
+      final request = http.Request('GET', Uri.parse(url));
+      final response = await client.send(request);
+
+      if (response.statusCode != 200) {
+        onError('Error en el servidor al descargar: HTTP ${response.statusCode}');
+        client.close();
+        return;
+      }
+
+      final totalBytes = response.contentLength ?? 0;
+      int receivedBytes = 0;
+
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/booster_update.apk');
+      if (await file.exists()) {
+        await file.delete();
+      }
+
+      final sink = file.openWrite();
+
+      await for (final chunk in response.stream) {
+        receivedBytes += chunk.length;
+        sink.add(chunk);
+        final progress = totalBytes > 0 ? (receivedBytes / totalBytes) : 0.0;
+        onProgress(progress, receivedBytes, totalBytes);
+      }
+
+      await sink.flush();
+      await sink.close();
+      client.close();
+
+      onComplete(file.path);
+
+      // Open the APK using OpenFilex which invokes Android's native package installer
+      final result = await OpenFilex.open(
+        file.path,
+        type: 'application/vnd.android.package-archive',
+      );
+      debugPrint('OpenFilex result: ${result.type} - ${result.message}');
+    } catch (e) {
+      debugPrint('Error downloading and installing APK: $e');
+      onError(e.toString());
     }
   }
 

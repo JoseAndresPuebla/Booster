@@ -5,6 +5,7 @@ import '../core/services/supabase_service.dart';
 import '../core/services/update_service.dart';
 import '../models/game_type.dart';
 import '../widgets/daily_timer_badge.dart';
+import '../widgets/update_dialog_widget.dart';
 import 'set_selector_screen.dart';
 import 'collection_binder_screen.dart';
 
@@ -74,77 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showUpdateDialog(UpdateInfo info) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E2235),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.system_update_rounded, color: AppTheme.pokemonColor),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                '¡Actualización v${info.latestVersion}!',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Tu versión actual: v${info.currentVersion}',
-              style: const TextStyle(color: Colors.white60, fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Novedades:',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                info.releaseNotes.isNotEmpty
-                    ? info.releaseNotes
-                    : 'Nuevas portadas oficiales de sobres, corrección de rarezas y filtros de cartas.',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-                maxLines: 8,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Más tarde', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.pokemonColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              if (info.apkDownloadUrl != null) {
-                UpdateService.launchUpdateUrl(info.apkDownloadUrl!);
-              }
-            },
-            icon: const Icon(Icons.download_rounded, size: 18),
-            label: const Text('Descargar e Instalar'),
-          ),
-        ],
-      ),
-    );
+    UpdateDialogWidget.show(context, info);
   }
 
   @override

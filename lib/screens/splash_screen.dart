@@ -3,6 +3,7 @@ import '../core/constants/app_theme.dart';
 import '../core/services/storage_service.dart';
 import '../core/services/supabase_service.dart';
 import '../core/services/update_service.dart';
+import '../widgets/update_dialog_widget.dart';
 import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -52,44 +53,18 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _showUpdateDialog(UpdateInfo update) {
-    showDialog(
-      context: context,
+    UpdateDialogWidget.show(
+      context,
+      update,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Row(
-          children: [
-            Icon(Icons.system_update_rounded, color: Colors.amberAccent),
-            SizedBox(width: 10),
-            Text('¡Nueva versión!'),
-          ],
-        ),
-        content: Text(
-          'Versión ${update.latestVersion} disponible en GitHub.\n\n${update.releaseNotes}',
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const HomeScreen()),
-              );
-            },
-            child: const Text('Más tarde', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.pokemonColor),
-            onPressed: () {
-              if (update.apkDownloadUrl != null) {
-                UpdateService.launchUpdateUrl(update.apkDownloadUrl!);
-              }
-            },
-            child: const Text('Actualizar ahora', style: TextStyle(color: Colors.black)),
-          ),
-        ],
-      ),
+      onDismiss: () {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        }
+      },
     );
   }
 
