@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/game_type.dart';
 import '../core/constants/api_constants.dart';
 import '../core/services/storage_service.dart';
@@ -59,55 +60,58 @@ class _DailyTimerBadgeState extends State<DailyTimerBadge> {
     final bool isAdmin = StorageService.isAdminUser();
     final bool hasPacks = isAdmin || _remainingPacks > 0;
 
+    final Color badgeColor = isAdmin
+        ? const Color(0xFFE040FB)
+        : hasPacks
+            ? const Color(0xFF00E5FF)
+            : const Color(0xFFFFA000);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isAdmin
-            ? Colors.purpleAccent.withOpacity(0.2)
-            : hasPacks
-                ? Colors.green.withOpacity(0.2)
-                : Colors.redAccent.withOpacity(0.15),
+        color: badgeColor.withOpacity(0.12),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isAdmin
-              ? Colors.purpleAccent
-              : hasPacks
-                  ? Colors.greenAccent
-                  : Colors.redAccent.withOpacity(0.5),
+          color: badgeColor.withOpacity(0.35),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: badgeColor.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            isAdmin
-                ? Icons.all_inclusive_rounded
-                : hasPacks
-                    ? Icons.check_circle_outline_rounded
-                    : Icons.access_time_rounded,
-            size: 14,
-            color: isAdmin
-                ? Colors.purpleAccent
-                : hasPacks
-                    ? Colors.greenAccent
-                    : Colors.redAccent,
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: badgeColor,
+              boxShadow: [
+                BoxShadow(
+                  color: badgeColor.withOpacity(0.8),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
           ),
           const SizedBox(width: 6),
           Text(
             isAdmin
-                ? 'Tester: Ilimitado'
+                ? 'TESTER: ILIMITADO'
                 : hasPacks
-                    ? '$_remainingPacks/${ApiConstants.dailyPacksPerGame} Sobres'
-                    : 'Recarga en ${_formatDuration(_timeRemaining)}',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: isAdmin
-                  ? Colors.purpleAccent
-                  : hasPacks
-                      ? Colors.greenAccent
-                      : Colors.white70,
+                    ? '$_remainingPacks/${ApiConstants.dailyPacksPerGame} SOBRES'
+                    : _formatDuration(_timeRemaining),
+            style: GoogleFonts.outfit(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: badgeColor,
             ),
           ),
         ],

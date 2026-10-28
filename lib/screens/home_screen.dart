@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/app_theme.dart';
 import '../core/services/storage_service.dart';
 import '../core/services/supabase_service.dart';
@@ -18,7 +19,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _nickname = 'Coleccionista';
-  int _totalCards = 0;
+  int _currentTabIndex = 0;
 
   @override
   void initState() {
@@ -32,18 +33,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _loadProfileData() {
     final profile = StorageService.getUserProfile();
-    if (profile != null) {
-      _nickname = profile.nickname;
+    if (profile != null && mounted) {
+      setState(() {
+        _nickname = profile.nickname;
+      });
     }
-
-    int count = 0;
-    for (final game in GameType.values) {
-      count += StorageService.getTotalCardsCollected(game);
-    }
-
-    setState(() {
-      _totalCards = count;
-    });
   }
 
   Future<void> _checkUpdatesSilently() async {
@@ -54,9 +48,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _manualCheckUpdates() async {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Buscando actualizaciones en GitHub...'),
-        duration: Duration(seconds: 1),
+      SnackBar(
+        backgroundColor: AppTheme.surfaceContainerHigh,
+        content: Text(
+          'Buscando actualizaciones en GitHub...',
+          style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+        ),
+        duration: const Duration(seconds: 1),
       ),
     );
 
@@ -68,7 +66,11 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('¡Tienes la versión más reciente (v${info.currentVersion})!'),
+          backgroundColor: AppTheme.surfaceContainerHigh,
+          content: Text(
+            '¡Tienes la versión más reciente (v${info.currentVersion})!',
+            style: GoogleFonts.plusJakartaSans(color: Colors.greenAccent),
+          ),
         ),
       );
     }
@@ -78,114 +80,308 @@ class _HomeScreenState extends State<HomeScreen> {
     UpdateDialogWidget.show(context, info);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
+  void _showChangeNicknameDialog() {
+    final controller = TextEditingController(text: _nickname);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppTheme.glassBorder),
+        ),
+        title: Text(
+          'Editar Perfil',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.style_rounded, color: AppTheme.pokemonColor, size: 20),
-            const SizedBox(width: 8),
             Text(
-              'BOOSTER TCG',
-              style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2),
+              'Ingresa tu nuevo apodo de coleccionista.\n(Usa "admin01" para activar el modo de sobres ilimitados)',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Ej. admin01',
+                hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted),
+                prefixIcon: const Icon(Icons.badge_rounded, color: AppTheme.pokemonColor),
+                filled: true,
+                fillColor: AppTheme.surfaceContainerLow,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.sync_rounded),
-            tooltip: 'Buscar Actualización',
-            onPressed: _manualCheckUpdates,
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancelar', style: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.pokemonColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty) {
+                Navigator.pop(ctx);
+                await SupabaseService.syncOrCreateProfile(newName);
+                _loadProfileData();
+              }
+            },
+            child: Text(
+              'Guardar',
+              style: GoogleFonts.outfit(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isAdmin = StorageService.isAdminUser();
+
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: SafeArea(
+        bottom: false,
+        child: Stack(
           children: [
-            // USER STATS HEADER
-            _buildUserHeader(),
-
-            const SizedBox(height: 28),
-
-            // SECTION TITLE
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Elige tu Juego',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
-                  ),
+            // Ambient Top Spotlight
+            Positioned(
+              top: -60,
+              left: MediaQuery.of(context).size.width / 2 - 140,
+              child: Container(
+                width: 280,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.pokemonColor.withOpacity(0.06),
                 ),
-                TextButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const CollectionBinderScreen(),
-                      ),
-                    ).then((_) => _loadProfileData());
-                  },
-                  icon: const Icon(Icons.auto_stories_rounded, size: 16),
-                  label: const Text('Mi Álbum'),
+              ),
+            ),
+
+            // Main Content Area
+            Column(
+              children: [
+                // Top App Bar with Logo & Static Profile Avatar
+                _buildTopAppBar(isAdmin),
+
+                // Main Scrollable Body
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Greeting & User Status Pill
+                        _buildUserGreeting(isAdmin),
+
+                        const SizedBox(height: 24),
+
+                        // Section Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: AppTheme.pokemonColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'UNIVERSOS DISPONIBLES',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.5,
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '${GameType.values.length} JUEGOS',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textMuted,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        // Franchise Cards List
+                        ...GameType.values.map((game) => _buildFranchiseCard(game)),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 12),
-
-            // GAME CARDS LIST
-            ...GameType.values.map((game) => _buildGameCard(game)),
-
-            const SizedBox(height: 30),
+            // Floating Bottom Navigation Bar (Glass Capsule)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 24,
+              child: _buildFloatingBottomNav(),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildUserHeader() {
-    final bool isAdmin = StorageService.isAdminUser();
-
+  Widget _buildTopAppBar(bool isAdmin) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: AppTheme.surface.withOpacity(0.85),
+        border: const Border(
+          bottom: BorderSide(color: AppTheme.glassBorder, width: 1.0),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // App Logo Placeholder + Title
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.glassBorder),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.pokemonColor.withOpacity(0.2),
+                      blurRadius: 10,
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.style_rounded,
+                    color: AppTheme.pokemonColor,
+                    size: 22,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'BOOSTER',
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2.0,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    'VAULT HUB',
+                    style: GoogleFonts.outfit(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Action: Sync updates + Static Profile Avatar Icon
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.sync_rounded, size: 20, color: AppTheme.textSecondary),
+                tooltip: 'Buscar Actualización',
+                onPressed: _manualCheckUpdates,
+              ),
+              const SizedBox(width: 4),
+
+              // Static Profile Avatar with dynamic gradient ring
+              GestureDetector(
+                onTap: _showChangeNicknameDialog,
+                child: Container(
+                  padding: const EdgeInsets.all(2.0),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.pokemonColor, Color(0xFF00E5FF)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.pokemonColor.withOpacity(0.3),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 17,
+                    backgroundColor: AppTheme.surfaceContainerHigh,
+                    child: Icon(
+                      isAdmin ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
+                      size: 20,
+                      color: isAdmin ? Colors.purpleAccent : AppTheme.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserGreeting(bool isAdmin) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainer.withOpacity(0.85),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isAdmin ? Colors.purpleAccent.withOpacity(0.5) : AppTheme.cardBorder,
-          width: isAdmin ? 1.5 : 1.0,
+          color: isAdmin ? Colors.purpleAccent.withOpacity(0.5) : AppTheme.glassBorder,
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: isAdmin
-                ? Colors.purpleAccent.withOpacity(0.15)
-                : Colors.black.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: isAdmin
-                ? Colors.purpleAccent.withOpacity(0.2)
-                : AppTheme.riftboundColor.withOpacity(0.2),
-            child: Icon(
-              isAdmin ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
-              size: 32,
-              color: isAdmin ? Colors.purpleAccent : AppTheme.riftboundColor,
-            ),
-          ),
-          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,9 +391,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     Flexible(
                       child: Text(
                         '¡Hola, $_nickname!',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                        style: GoogleFonts.outfit(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -205,17 +402,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (isAdmin) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.purpleAccent.withOpacity(0.25),
+                          color: Colors.purpleAccent.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.purpleAccent, width: 0.8),
                         ),
-                        child: const Text(
+                        child: Text(
                           'TESTER ∞',
-                          style: TextStyle(
+                          style: GoogleFonts.outfit(
                             fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                             color: Colors.purpleAccent,
                             letterSpacing: 0.5,
                           ),
@@ -225,25 +422,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.collections_bookmark_rounded,
-                        size: 14, color: Colors.amberAccent),
-                    const SizedBox(width: 6),
-                    Text(
-                      '$_totalCards cartas en tu colección',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
+                Text(
+                  'Abre sobres diarios y completa tu bóveda de colecciones.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.edit_rounded, size: 20, color: Colors.white54),
+            icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.textMuted),
             tooltip: 'Cambiar apodo',
             onPressed: _showChangeNicknameDialog,
           ),
@@ -252,68 +442,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showChangeNicknameDialog() {
-    final controller = TextEditingController(text: _nickname);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Text('Cambiar Nombre de Usuario'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Ingresa tu nuevo apodo.\n(Usa "admin01" para activar el modo de sobres ilimitados)',
-              style: TextStyle(fontSize: 13, color: Colors.white70),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                hintText: 'Ej. admin01',
-                prefixIcon: Icon(Icons.badge_rounded),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newName = controller.text.trim();
-              if (newName.isNotEmpty) {
-                Navigator.pop(ctx);
-                await SupabaseService.syncOrCreateProfile(newName);
-                _loadProfileData();
-              }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGameCard(GameType game) {
-    final cardsCount = StorageService.getTotalCardsCollected(game);
-
+  Widget _buildFranchiseCard(GameType game) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: AppTheme.surfaceContainer.withOpacity(0.9),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: game.primaryColor.withOpacity(0.3),
-          width: 1.5,
+          color: game.primaryColor.withOpacity(0.25),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
             color: game.primaryColor.withOpacity(0.12),
-            blurRadius: 12,
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
@@ -335,71 +482,162 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Game Header: Title + Individual Game Daily Timer Badge
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            game.title,
-                            style: TextStyle(
+                            game.title.toUpperCase(),
+                            style: GoogleFonts.outfit(
                               fontSize: 18,
                               fontWeight: FontWeight.w900,
+                              letterSpacing: 1.0,
                               color: game.primaryColor,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             game.subtitle,
-                            style: const TextStyle(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
-                              color: Colors.white54,
+                              color: AppTheme.textSecondary,
                             ),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    // Individual Timer per Game
                     DailyTimerBadge(game: game),
                   ],
                 ),
-                const SizedBox(height: 16),
+
+                const SizedBox(height: 18),
+
+                // Card Footer Action
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text(
-                      '$cardsCount cartas obtenidas',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w600,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: game.primaryColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: game.primaryColor.withOpacity(0.4), width: 1),
                       ),
-                    ),
-                    Row(
-                      children: [
-                        Text(
-                          'ELEGIR SET',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: game.primaryColor,
-                            letterSpacing: 1.0,
+                      child: Row(
+                        children: [
+                          Text(
+                            'EXPLORAR SOBRES',
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.0,
+                              color: game.primaryColor,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 16,
-                          color: game.primaryColor,
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 14,
+                            color: game.primaryColor,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingBottomNav() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161826).withOpacity(0.92),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: AppTheme.glassBorder, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.65),
+            blurRadius: 28,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildNavItem(
+            icon: Icons.dashboard_rounded,
+            label: 'Bóveda',
+            isSelected: _currentTabIndex == 0,
+            onTap: () => setState(() => _currentTabIndex = 0),
+          ),
+          _buildNavItem(
+            icon: Icons.auto_stories_rounded,
+            label: 'Mi Álbum',
+            isSelected: _currentTabIndex == 1,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const CollectionBinderScreen(),
+                ),
+              ).then((_) => _loadProfileData());
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.pokemonColor.withOpacity(0.18) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected
+              ? Border.all(color: AppTheme.pokemonColor.withOpacity(0.5), width: 1.0)
+              : null,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isSelected ? AppTheme.pokemonColor : AppTheme.textMuted,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? Colors.white : AppTheme.textMuted,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
         ),
       ),
     );

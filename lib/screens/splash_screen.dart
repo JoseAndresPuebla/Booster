@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/app_theme.dart';
 import '../core/services/storage_service.dart';
 import '../core/services/supabase_service.dart';
@@ -117,19 +118,24 @@ class _SplashScreenState extends State<SplashScreen> {
 
               const SizedBox(height: 24),
 
-              const Text(
+              Text(
                 'BOOSTER TCG',
-                style: TextStyle(
+                style: GoogleFonts.outfit(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 3,
+                  color: AppTheme.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Pokémon • Magic • Riftbound • One Piece',
+              Text(
+                'Pokémon • Magic • Riftbound • One Piece • WWE',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.white60),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  color: AppTheme.textMuted,
+                  letterSpacing: 0.5,
+                ),
               ),
 
               const SizedBox(height: 48),
@@ -137,22 +143,35 @@ class _SplashScreenState extends State<SplashScreen> {
               if (_isLoading)
                 const CircularProgressIndicator(color: AppTheme.riftboundColor)
               else ...[
-                const Text(
+                Text(
                   'Elige tu apodo de coleccionista',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _nicknameController,
                   textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary),
                   decoration: InputDecoration(
                     hintText: 'Ej. MaestroTCG',
-                    hintStyle: const TextStyle(color: Colors.white38),
+                    hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted),
                     filled: true,
-                    fillColor: AppTheme.surfaceLight,
+                    fillColor: AppTheme.surfaceContainerHigh,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(color: AppTheme.glassBorder),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: AppTheme.glassBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppTheme.pokemonColor, width: 1.5),
                     ),
                   ),
                 ),
@@ -168,9 +187,9 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                     ),
                     onPressed: _handleSaveNickname,
-                    child: const Text(
+                    child: Text(
                       'EMPEZAR A COLECCIONAR',
-                      style: TextStyle(
+                      style: GoogleFonts.outfit(
                         color: Colors.black,
                         fontWeight: FontWeight.w900,
                         fontSize: 14,

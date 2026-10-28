@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/app_theme.dart';
 import '../core/services/supabase_service.dart';
 import '../models/card_model.dart';
@@ -212,22 +213,41 @@ class _PackOpeningScreenState extends State<PackOpeningScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
+        backgroundColor: AppTheme.surface.withOpacity(0.85),
+        elevation: 0,
         title: Text(
           widget.cardSet.name,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
+          icon: const Icon(Icons.close_rounded, color: AppTheme.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 600),
-          child: _buildCurrentStage(),
-        ),
+      body: Stack(
+        children: [
+          // Ambient Dynamic Spotlight
+          Positioned(
+            top: -40,
+            left: MediaQuery.of(context).size.width / 2 - 150,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.game.primaryColor.withOpacity(0.08),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 600),
+              child: _buildCurrentStage(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -262,12 +282,13 @@ class _PackOpeningScreenState extends State<PackOpeningScreen>
                 ),
               ),
               const SizedBox(height: 24),
-              const Text(
+              Text(
                 '¡Abriendo sobre!',
-                style: TextStyle(
+                style: GoogleFonts.outfit(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.5,
+                  color: AppTheme.textPrimary,
                 ),
               ),
             ],
@@ -321,12 +342,18 @@ class _PackOpeningScreenState extends State<PackOpeningScreen>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white12,
+            color: AppTheme.surfaceContainerHigh.withOpacity(0.85),
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.glassBorder),
           ),
           child: Text(
-            'Carta ${_currentCardIndex + 1} de ${_packCards.length}',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            'CARTA ${_currentCardIndex + 1} DE ${_packCards.length}',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+              letterSpacing: 1.0,
+              color: AppTheme.textPrimary,
+            ),
           ),
         ),
 
@@ -424,35 +451,39 @@ class _PackOpeningScreenState extends State<PackOpeningScreen>
             decoration: BoxDecoration(
               color: currentCard.rarity.tier >= 4
                   ? Colors.amber.withOpacity(0.2)
-                  : Colors.white10,
+                  : AppTheme.surfaceContainerHigh.withOpacity(0.8),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: currentCard.rarity.tier >= 4
                     ? Colors.amberAccent
-                    : Colors.white24,
+                    : AppTheme.glassBorder,
+                width: 1.2,
               ),
+              boxShadow: currentCard.rarity.tier >= 4
+                  ? [BoxShadow(color: Colors.amberAccent.withOpacity(0.3), blurRadius: 12)]
+                  : null,
             ),
             child: Text(
               currentCard.rarity.label.toUpperCase(),
-              style: TextStyle(
+              style: GoogleFonts.outfit(
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1.5,
-                fontSize: 13,
+                fontSize: 12,
                 color: currentCard.rarity.tier >= 4
                     ? Colors.amberAccent
-                    : Colors.white70,
+                    : AppTheme.textSecondary,
               ),
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Desliza hacia un lado para la siguiente carta ➔',
-            style: TextStyle(color: Colors.white38, fontSize: 12),
+            style: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 12),
           ),
         ] else ...[
-          const Text(
+          Text(
             'Toca la carta para revelarla (o desliza hacia un lado)',
-            style: TextStyle(color: Colors.white60, fontSize: 13),
+            style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 13),
           ),
         ],
 
@@ -468,7 +499,7 @@ class _PackOpeningScreenState extends State<PackOpeningScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: isFlipped
                     ? widget.game.primaryColor
-                    : Colors.white24,
+                    : AppTheme.surfaceContainerHigh,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -480,8 +511,8 @@ class _PackOpeningScreenState extends State<PackOpeningScreen>
                     : (_currentCardIndex < _packCards.length - 1
                         ? 'SIGUIENTE CARTA'
                         : 'VER TODAS'),
-                style: const TextStyle(
-                  color: Colors.black,
+                style: GoogleFonts.outfit(
+                  color: isFlipped ? Colors.black : AppTheme.textPrimary,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.2,
                 ),
@@ -498,18 +529,19 @@ class _PackOpeningScreenState extends State<PackOpeningScreen>
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          const Text(
+          Text(
             '¡SOBRE COMPLETADO!',
-            style: TextStyle(
+            style: GoogleFonts.outfit(
               fontSize: 22,
               fontWeight: FontWeight.w900,
               letterSpacing: 2,
+              color: AppTheme.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Estas cartas se han añadido a tu álbum de colección',
-            style: TextStyle(color: Colors.white60, fontSize: 13),
+            style: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 13),
           ),
           const SizedBox(height: 24),
 
@@ -542,7 +574,9 @@ class _PackOpeningScreenState extends State<PackOpeningScreen>
             height: 52,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.pokemonColor,
+                backgroundColor: widget.game.primaryColor,
+                elevation: 4,
+                shadowColor: widget.game.primaryColor.withOpacity(0.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -550,9 +584,9 @@ class _PackOpeningScreenState extends State<PackOpeningScreen>
               onPressed: _isSaving ? null : () => Navigator.pop(context),
               child: _isSaving
                   ? const CircularProgressIndicator(color: Colors.black)
-                  : const Text(
+                  : Text(
                       'GUARDAR EN MI COLECCIÓN',
-                      style: TextStyle(
+                      style: GoogleFonts.outfit(
                         color: Colors.black,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2,

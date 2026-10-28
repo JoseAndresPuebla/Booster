@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:open_filex/open_filex.dart';
 import '../core/constants/app_theme.dart';
 import '../core/services/update_service.dart';
@@ -101,10 +102,10 @@ class _UpdateDialogWidgetState extends State<UpdateDialogWidget> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF1B1E2E),
+      backgroundColor: AppTheme.surfaceContainerLowest,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: Colors.white12, width: 1.5),
+        side: const BorderSide(color: AppTheme.glassBorder, width: 1.5),
       ),
       contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
       title: Row(
@@ -129,10 +130,10 @@ class _UpdateDialogWidgetState extends State<UpdateDialogWidget> {
                   : (_isInstallReady
                       ? '¡Lista para instalar!'
                       : '¡Actualización v${widget.updateInfo.latestVersion}!'),
-              style: const TextStyle(
+              style: GoogleFonts.outfit(
                 fontWeight: FontWeight.w900,
                 fontSize: 18,
-                color: Colors.white,
+                color: AppTheme.textPrimary,
               ),
             ),
           ),
@@ -313,9 +314,9 @@ class _UpdateDialogWidgetState extends State<UpdateDialogWidget> {
               ),
               onPressed: _startDownload,
               icon: const Icon(Icons.download_rounded, size: 18),
-              label: const Text(
+              label: Text(
                 'ACTUALIZAR DIRECTAMENTE',
-                style: TextStyle(fontWeight: FontWeight.w900),
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w900),
               ),
             ),
         ],
