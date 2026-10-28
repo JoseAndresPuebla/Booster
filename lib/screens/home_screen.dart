@@ -181,15 +181,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Main Scrollable Body
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      16,
+                      20,
+                      110 + MediaQuery.of(context).padding.bottom,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Greeting & User Status Pill
-                        _buildUserGreeting(isAdmin),
-
-                        const SizedBox(height: 24),
-
                         // Section Header
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -243,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned(
               left: 24,
               right: 24,
-              bottom: 24,
+              bottom: 16 + MediaQuery.of(context).padding.bottom,
               child: _buildFloatingBottomNav(),
             ),
           ],
@@ -316,9 +316,29 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
 
-          // Action: Sync updates + Static Profile Avatar Icon
+          // Action: Sync updates + Profile Avatar Icon
           Row(
             children: [
+              if (isAdmin) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.purpleAccent.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.purpleAccent.withOpacity(0.7), width: 1.0),
+                  ),
+                  child: Text(
+                    'TESTER ∞',
+                    style: GoogleFonts.outfit(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.purpleAccent,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+              ],
               IconButton(
                 icon: const Icon(Icons.sync_rounded, size: 20, color: AppTheme.textSecondary),
                 tooltip: 'Buscar Actualización',
@@ -326,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 4),
 
-              // Static Profile Avatar with dynamic gradient ring
+              // Profile Avatar with dynamic gradient ring (tap to edit nickname)
               GestureDetector(
                 onTap: _showChangeNicknameDialog,
                 child: Container(
@@ -355,87 +375,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUserGreeting(bool isAdmin) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceContainer.withOpacity(0.85),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isAdmin ? Colors.purpleAccent.withOpacity(0.5) : AppTheme.glassBorder,
-          width: 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        '¡Hola, $_nickname!',
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.textPrimary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (isAdmin) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.purpleAccent.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.purpleAccent, width: 0.8),
-                        ),
-                        child: Text(
-                          'TESTER ∞',
-                          style: GoogleFonts.outfit(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.purpleAccent,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Abre sobres diarios y completa tu bóveda de colecciones.',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.textMuted),
-            tooltip: 'Cambiar apodo',
-            onPressed: _showChangeNicknameDialog,
           ),
         ],
       ),

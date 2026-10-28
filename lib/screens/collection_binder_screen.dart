@@ -132,8 +132,8 @@ class _CollectionBinderScreenState extends State<CollectionBinderScreen> {
           // 1. Division: Game Selector Pills Carousel
           _buildGameSelector(primary),
 
-          // 2. Division: Sets Horizontal Carousel
-          _buildSetSelector(availableSets, primary),
+          // 2. Division: Sets Filter Header (Collectr style modal)
+          _buildSetSelector(availableSets, rawList, primary),
 
           // 3. Search and Rarity Filter Bar
           _buildSearchAndRarityBar(primary),
@@ -237,76 +237,552 @@ class _CollectionBinderScreenState extends State<CollectionBinderScreen> {
     );
   }
 
-  Widget _buildSetSelector(Map<String, String> availableSets, Color primary) {
+  CardSet? _getCardSet(String code) {
+    try {
+      return _officialSets.firstWhere(
+        (s) => s.code.toLowerCase() == code.toLowerCase(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _buildSetSelector(
+    Map<String, String> availableSets,
+    List<Map<String, dynamic>> rawList,
+    Color primary,
+  ) {
     if (availableSets.isEmpty) return const SizedBox.shrink();
+
+    final selectedSet = _selectedSetCode != null ? _getCardSet(_selectedSetCode!) : null;
+    final selectedSetName = selectedSet?.name ?? availableSets[_selectedSetCode] ?? 'Todos los Sets';
+    final hasFilter = _selectedSetCode != null;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLowest.withOpacity(0.6),
+        color: AppTheme.surfaceContainerLowest.withOpacity(0.85),
         border: const Border(bottom: BorderSide(color: AppTheme.glassBorder, width: 0.8)),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          // Filter Button (Opens Collectr-style modal)
+          Expanded(
+            child: InkWell(
+              onTap: () => _openSetPickerModal(context, availableSets, rawList, primary),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: hasFilter
+                      ? primary.withOpacity(0.18)
+                      : AppTheme.surfaceContainer.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: hasFilter ? primary.withOpacity(0.7) : AppTheme.glassBorder,
+                    width: 1.0,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // Icon or Logo Thumbnail
+                    if (selectedSet?.iconUrl != null &&
+                        selectedSet!.iconUrl!.isNotEmpty &&
+                        !selectedSet.iconUrl!.endsWith('.svg'))
+                      Container(
+                        width: 38,
+                        height: 24,
+                        margin: const EdgeInsets.only(right: 10),
+                        child: CachedNetworkImage(
+                          imageUrl: selectedSet.iconUrl!,
+                          fit: BoxFit.contain,
+                          errorWidget: (context, url, error) => Icon(Icons.style_rounded, size: 20, color: primary),
+                        ),
+                      )
+                    else if (selectedSet?.boosterArtUrl != null && selectedSet!.boosterArtUrl!.isNotEmpty)
+                      Container(
+                        width: 24,
+                        height: 32,
+                        margin: const EdgeInsets.only(right: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: AppTheme.glassBorder),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: CachedNetworkImage(
+                            imageUrl: selectedSet.boosterArtUrl!,
+                            fit: BoxFit.cover,
+                            errorWidget: (context, url, error) => Icon(Icons.style_rounded, size: 20, color: primary),
+                          ),
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Icon(
+                          hasFilter ? Icons.filter_alt_rounded : Icons.layers_rounded,
+                          size: 20,
+                          color: hasFilter ? primary : AppTheme.textSecondary,
+                        ),
+                      ),
+
+                    // Label: "EXPANSIÓN" + Set Name
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            hasFilter ? 'FILTRANDO POR EXPANSIÓN' : 'EXPANSIÓN',
+                            style: GoogleFonts.outfit(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.0,
+                              color: hasFilter ? primary : AppTheme.textMuted,
+                            ),
+                          ),
+                          Text(
+                            selectedSetName,
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Dropdown chevron
+                    Icon(
+                      Icons.expand_more_rounded,
+                      size: 22,
+                      color: hasFilter ? primary : AppTheme.textMuted,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Clear Button if filter is active
+          if (hasFilter) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.close_rounded, size: 20, color: AppTheme.textMuted),
+              tooltip: 'Mostrar todos los sets',
+              onPressed: () => setState(() => _selectedSetCode = null),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _openSetPickerModal(
+    BuildContext context,
+    Map<String, String> availableSets,
+    List<Map<String, dynamic>> rawList,
+    Color primary,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        String modalSearch = '';
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            // Count cards collected per set code
+            final Map<String, int> collectedCountBySet = {};
+            for (final item in rawList) {
+              final c = CardModel.fromJson(item['card'] as Map<String, dynamic>);
+              final key = c.setCode.toLowerCase();
+              collectedCountBySet[key] = (collectedCountBySet[key] ?? 0) + 1;
+            }
+
+            // Filter sets by search query
+            final entries = availableSets.entries.where((e) {
+              if (modalSearch.isEmpty) return true;
+              final q = modalSearch.toLowerCase();
+              return e.value.toLowerCase().contains(q) || e.key.toLowerCase().contains(q);
+            }).toList();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.82,
+              decoration: const BoxDecoration(
+                color: AppTheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border(
+                  top: BorderSide(color: AppTheme.glassBorder, width: 1.5),
+                  left: BorderSide(color: AppTheme.glassBorder, width: 1.5),
+                  right: BorderSide(color: AppTheme.glassBorder, width: 1.5),
+                ),
+              ),
+              child: Column(
+                children: [
+                  // Top Drag Handle
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+
+                  // Header Row
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'SELECCIONAR EXPANSIÓN',
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            Text(
+                              '${availableSets.length} EXPANSIONES DISPONIBLES',
+                              style: GoogleFonts.outfit(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.0,
+                                color: primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: AppTheme.textSecondary),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Modal Search Bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: TextField(
+                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13),
+                      onChanged: (val) {
+                        setModalState(() {
+                          modalSearch = val.trim();
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Buscar expansión por nombre o código (ej. 151, OP-05)...',
+                        hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textMuted, fontSize: 12),
+                        prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppTheme.textMuted),
+                        filled: true,
+                        fillColor: AppTheme.surfaceContainerHigh.withOpacity(0.7),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Sets List
+                  Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: entries.length + (modalSearch.isEmpty ? 1 : 0),
+                      separatorBuilder: (context, index) => const SizedBox(height: 8),
+                      itemBuilder: (context, idx) {
+                        // "Todas las expansiones" tile at the top
+                        if (modalSearch.isEmpty && idx == 0) {
+                          final isSelected = _selectedSetCode == null;
+                          return _buildAllSetsModalTile(
+                            isSelected: isSelected,
+                            totalCards: rawList.length,
+                            primary: primary,
+                            onTap: () {
+                              setState(() => _selectedSetCode = null);
+                              Navigator.pop(ctx);
+                            },
+                          );
+                        }
+
+                        final entryIndex = modalSearch.isEmpty ? idx - 1 : idx;
+                        final entry = entries[entryIndex];
+                        final setObj = _getCardSet(entry.key);
+                        final isSelected = _selectedSetCode != null &&
+                            _selectedSetCode!.toLowerCase() == entry.key.toLowerCase();
+                        final collected = collectedCountBySet[entry.key.toLowerCase()] ?? 0;
+
+                        return _buildSetModalTile(
+                          setEntry: entry,
+                          cardSet: setObj,
+                          collectedCount: collected,
+                          isSelected: isSelected,
+                          primary: primary,
+                          onTap: () {
+                            setState(() => _selectedSetCode = entry.key);
+                            Navigator.pop(ctx);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildAllSetsModalTile({
+    required bool isSelected,
+    required int totalCards,
+    required Color primary,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? primary.withOpacity(0.18) : AppTheme.surfaceContainer.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? primary : AppTheme.glassBorder,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
         child: Row(
           children: [
-            // "Todos los Sets" chip
-            _buildSetChip(
-              label: 'Todos los Sets',
-              isSelected: _selectedSetCode == null,
-              onTap: () => setState(() => _selectedSetCode = null),
-              primary: primary,
+            Container(
+              width: 56,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isSelected ? primary.withOpacity(0.25) : AppTheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: isSelected ? primary.withOpacity(0.5) : AppTheme.glassBorder),
+              ),
+              child: Icon(
+                Icons.all_inclusive_rounded,
+                color: isSelected ? primary : AppTheme.textSecondary,
+                size: 22,
+              ),
             ),
-
-            // Individual Sets chips
-            ...availableSets.entries.map((entry) {
-              final isSelected = _selectedSetCode != null &&
-                  _selectedSetCode!.toLowerCase() == entry.key.toLowerCase();
-
-              return Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: _buildSetChip(
-                  label: entry.value,
-                  isSelected: isSelected,
-                  onTap: () => setState(() => _selectedSetCode = entry.key),
-                  primary: primary,
-                ),
-              );
-            }),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Todas las expansiones',
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    'Ver todas las cartas conseguidas ($totalCards en total)',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle_rounded, color: primary, size: 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSetChip({
-    required String label,
+  Widget _buildSetModalTile({
+    required MapEntry<String, String> setEntry,
+    required CardSet? cardSet,
+    required int collectedCount,
     required bool isSelected,
-    required VoidCallback onTap,
     required Color primary,
+    required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? primary.withOpacity(0.18) : AppTheme.surfaceContainer.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(14),
+          color: isSelected ? primary.withOpacity(0.18) : AppTheme.surfaceContainer.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? primary.withOpacity(0.8) : AppTheme.glassBorder,
-            width: 1.0,
+            color: isSelected ? primary : AppTheme.glassBorder,
+            width: isSelected ? 1.5 : 1.0,
           ),
         ),
-        child: Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            color: isSelected ? primary : AppTheme.textSecondary,
+        child: Row(
+          children: [
+            // Set Logo / Rótulo Box
+            Container(
+              width: 56,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerHigh.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.glassBorder),
+              ),
+              child: _buildModalSetThumbnail(cardSet, primary),
+            ),
+            const SizedBox(width: 14),
+
+            // Set Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    setEntry.value,
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        setEntry.key.toUpperCase(),
+                        style: GoogleFonts.outfit(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: primary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      if (cardSet?.releaseDate != null && cardSet!.releaseDate!.isNotEmpty) ...[
+                        Text(
+                          ' • ${cardSet.releaseDate!.split('-').first}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Collected Count Badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: collectedCount > 0
+                    ? primary.withOpacity(0.15)
+                    : AppTheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: collectedCount > 0
+                      ? primary.withOpacity(0.4)
+                      : AppTheme.glassBorder,
+                  width: 0.8,
+                ),
+              ),
+              child: Text(
+                collectedCount > 0
+                    ? '$collectedCount cartas'
+                    : '0',
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: collectedCount > 0 ? primary : AppTheme.textMuted,
+                ),
+              ),
+            ),
+
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.check_circle_rounded, color: primary, size: 20),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModalSetThumbnail(CardSet? cardSet, Color primary) {
+    if (cardSet?.iconUrl != null &&
+        cardSet!.iconUrl!.isNotEmpty &&
+        !cardSet.iconUrl!.endsWith('.svg')) {
+      return Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: CachedNetworkImage(
+          imageUrl: cardSet.iconUrl!,
+          fit: BoxFit.contain,
+          placeholder: (context, url) => Center(
+            child: SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 1.5, color: primary),
+            ),
           ),
+          errorWidget: (context, url, error) => _buildFallbackSetLogo(cardSet, primary),
+        ),
+      );
+    } else if (cardSet?.boosterArtUrl != null && cardSet!.boosterArtUrl!.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: CachedNetworkImage(
+          imageUrl: cardSet.boosterArtUrl!,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Center(
+            child: SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 1.5, color: primary),
+            ),
+          ),
+          errorWidget: (context, url, error) => _buildFallbackSetLogo(cardSet, primary),
+        ),
+      );
+    } else {
+      return _buildFallbackSetLogo(cardSet, primary);
+    }
+  }
+
+  Widget _buildFallbackSetLogo(CardSet? cardSet, Color primary) {
+    final code = cardSet?.code.toUpperCase() ?? 'TCG';
+    return Center(
+      child: Text(
+        code.length > 5 ? code.substring(0, 5) : code,
+        style: GoogleFonts.outfit(
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          color: primary,
+          letterSpacing: 0.5,
         ),
       ),
     );

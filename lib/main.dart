@@ -6,6 +6,9 @@ import 'screens/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Fullscreen Sticky Immersive Mode (auto-hides navigation bar & status bar; reveals on edge swipe)
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
   // Dark immersive system navigation
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
